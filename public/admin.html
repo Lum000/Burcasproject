@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Painel Admin</title>
+<link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Painel Administrativo</h1>
+
+<section class="card">
+
+<h2>Informações da Lanchonete</h2>
+
+<form id="formInfo">
+
+<label>Nome da Lanchonete</label>
+<input type="text" id="nomeLoja" name="nomeLoja">
+
+<label>Logo</label>
+<input type="file" id="logoInput" name="logo">
+
+<img id="previewLogo"/>
+
+<button type="submit">Salvar Informações</button>
+
+</form>
+
+</section>
+
+
+<section class="card">
+
+<h2>Configuração de Mesas</h2>
+
+<form id="formMesas">
+
+<label>Quantidade de mesas</label>
+<input type="number" id="qtdMesas" name="qtdMesas" min="1">
+
+<button type="submit">Salvar Mesas</button>
+
+</form>
+
+</section>
+
+
+<section class="card">
+
+<h2>Preview das Mesas</h2>
+
+<div id="mesasContainer"></div>
+
+</section>
+
+</div>
+
+<script src="js/admin.js"></script>
+
+</body>
+</html>
