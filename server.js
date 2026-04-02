@@ -1,6 +1,7 @@
 const express = require("express")
 const sqlite3 = require("sqlite3").verbose()
 const path = require("path")
+const multer = require("multer")
 
 const app = express()
 app.use(express.json())
@@ -42,6 +43,24 @@ db.serialize(() => {
   `)
 
 })
+const storage = multer.diskStorage({
+
+destination: function(req,file,cb){
+cb(null,"uploads/")
+},
+
+filename: function(req,file,cb){
+cb(null, Date.now() + "-" + file.originalname)
+}
+
+})
+
+const upload = multer({storage:storage})
+
+app.use(express.json())
+app.use(express.urlencoded({extended:true}))
+
+app.use("/uploads",express.static("uploads"))
 
 /* Recupera o id da mesa selecionada */
 
@@ -98,16 +117,19 @@ app.listen(3000, () => {
 
 
 /* Adicionar Produto ao Banco de Dados */
-app.post("/addProduct",(req,res)=>{
+app.post("/addProduct", upload.single("imagem"), (req,res)=>{
 
-const {nome,imagem,preco,categoria} = req.body
+const {nome, preco, categoria} = req.body
+const imagem = req.file.filename
+
+console.log(nome,preco,categoria,imagem)
 
 db.run(
-"INSERT INTO produtos (nome,img,preco,categoria) VALUES (?,?,?,?)",
-[nome,imagem,preco,categoria]
+"INSERT INTO produtos (nome,preco,categoria,imagem) VALUES (?,?,?,?)",
+[nome,preco,categoria,imagem]
 )
 
-res.json({status:"ok"})
+res.send("ok")
 
 })
 
