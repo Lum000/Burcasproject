@@ -71,14 +71,15 @@ function renderProducts(lista){
     lista.forEach(produto =>{
             divProducts.innerHTML += `
         <div class="product-item" data-id="${produto.id}" onclick="addProduct(${produto.id})">
+        <img src="/uploads/${produto.img}"
 
         <div class="product-name">
             ${produto.nome}
         </div>
-
-        <div class="product-price">
+        <div class="preco">
             R$ ${produto.preco}
         </div>
+        <button class="add">Adicionar</button>
 
         </div>
     `

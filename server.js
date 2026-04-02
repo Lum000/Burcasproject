@@ -125,7 +125,7 @@ const imagem = req.file.filename
 console.log(nome,preco,categoria,imagem)
 
 db.run(
-"INSERT INTO produtos (nome,preco,categoria,imagem) VALUES (?,?,?,?)",
+"INSERT INTO produtos (nome,preco,categoria,img) VALUES (?,?,?,?)",
 [nome,preco,categoria,imagem]
 )
 
