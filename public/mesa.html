@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+
+<meta charset="UTF-8">
+<link rel="stylesheet" href="css/mesa.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Mesa</title>
+
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+
+<div class="sidebar" id="sidebar">
+
+<h2>Painel</h2>
+
+<a href="/">Mesas</a>
+<a href="#">Novo Pedido</a>
+<a href="cadastro_produto.html">Produtos</a>
+<a href="#">Admin</a>
+<a href="#">Relatórios</a>
+
+</div>
+
+
+<!-- HEADER IGUAL AO INDEX -->
+
+<header>
+
+<div class="logo">🍔 Lanchonete</div>
+
+<nav class="nav">
+
+<a href="/">Mesas</a>
+<a href="#">Pedidos</a>
+<a href="cadastro_produto.html">Produtos</a>
+<a href="#">Admin</a>
+
+</nav>
+
+<div class="menu-btn" onclick="toggleMenu()">☰</div>
+
+</header>
+
+
+<!-- CONTEÚDO -->
+
+<div class="mesa-info">
+
+<div class="mesa-card">
+
+<div class="mesa-numero" id="mesaNumero">
+</div>
+
+<div id="mesaStatus"></div>
+
+</div>
+
+
+<div class="pedidos">
+
+<h2>Pedidos</h2>
+
+<div class="total">
+Total: R$37
+</div>
+
+<button class="btn">
++ Adicionar Produto
+</button>
+
+</div>
+
+</div>
+<div id="productAlert" class="alert-overlay">
+
+  <div class="product-box">
+
+    <button class="close-modal" onclick="closeAlert()">✖</button>
+
+    <div class="categories">
+      <div onclick="showCategory('lanches')">Lanches</div>
+      <div onclick="showCategory('porcoes')">Porções</div>
+      <div onclick="showCategory('bebidas')">Bebidas</div>
+      <div onclick="showCategory('sobremesas')">Sobremesas</div>
+      <div onclick="showCategory('derivados')">Derivados</div>
+    </div>
+
+    <div id="productsList" class="products"></div>
+
+  </div>
+
+</div>
+
+</div>
+<div id="toastAdd" class="toast">
+✔ Produto adicionado
+</div>
+</body>
+<script src="js/mesa.js"></script>
+</html>

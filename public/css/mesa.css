@@ -1,0 +1,385 @@
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Segoe UI', Arial, sans-serif;
+}
+
+body{
+background:#111;
+color:white;
+min-height:100vh;
+}
+
+/* HEADER */
+
+header{
+
+background:#FFD400;
+
+color:black;
+
+display:flex;
+
+justify-content:space-between;
+
+align-items:center;
+
+padding:15px 20px;
+
+font-size:20px;
+
+font-weight:bold;
+
+box-shadow:0 4px 10px rgba(0,0,0,0.6);
+
+}
+
+/* LOGO */
+
+.logo{
+font-size:22px;
+}
+
+/* MENU NORMAL */
+
+.nav{
+display:flex;
+gap:20px;
+}
+
+.nav a{
+
+text-decoration:none;
+
+color:black;
+
+font-weight:bold;
+
+}
+
+/* BOTÃO MENU MOBILE */
+
+.menu-btn{
+
+font-size:26px;
+
+cursor:pointer;
+
+display:none;
+
+}
+
+/* SIDEBAR */
+
+.sidebar{
+
+position:fixed;
+
+top:0;
+
+left:-260px;
+
+width:260px;
+
+height:100%;
+
+background:#111;
+
+padding:30px;
+
+transition:0.3s;
+
+box-shadow:5px 0 15px rgba(0,0,0,0.7);
+
+z-index:200;
+
+}
+
+.sidebar.active{
+left:0;
+}
+
+.sidebar h2{
+
+color:#FFD400;
+
+margin-bottom:20px;
+
+}
+
+.sidebar a{
+
+display:block;
+
+color:white;
+
+text-decoration:none;
+
+margin:15px 0;
+
+font-size:18px;
+
+}
+
+.sidebar a:hover{
+color:#FFD400;
+}
+
+/* CONTAINER */
+
+.mesa-info{
+
+max-width:900px;
+
+margin:30px auto;
+
+padding:20px;
+
+}
+
+/* CARD DA MESA */
+
+.mesa-card{
+
+background:#1c1c1c;
+
+border-radius:15px;
+
+padding:25px;
+
+margin-bottom:25px;
+
+box-shadow:0 6px 20px rgba(0,0,0,0.6);
+
+border-left:6px solid #FFD400;
+
+}
+
+.mesa-numero{
+
+font-size:28px;
+
+font-weight:bold;
+
+margin-bottom:5px;
+
+}
+
+/* PEDIDOS */
+
+.pedidos{
+
+background:#1c1c1c;
+
+border-radius:15px;
+
+padding:20px;
+
+box-shadow:0 6px 20px rgba(0,0,0,0.6);
+
+}
+
+.pedidos h2{
+
+margin-bottom:15px;
+
+}
+
+/* ITEM PEDIDO */
+
+.pedido{
+
+display:flex;
+
+justify-content:space-between;
+
+padding:12px 0;
+
+border-bottom:1px solid #333;
+
+font-size:18px;
+
+}
+
+.pedido:last-child{
+border-bottom:none;
+}
+
+/* TOTAL */
+
+.total{
+
+margin-top:20px;
+
+font-size:22px;
+
+font-weight:bold;
+
+text-align:right;
+
+}
+
+/* BOTÃO */
+
+.btn{
+
+margin-top:20px;
+
+background:#FFD400;
+
+color:black;
+
+border:none;
+
+padding:12px 20px;
+
+font-size:16px;
+
+border-radius:8px;
+
+cursor:pointer;
+
+font-weight:bold;
+
+}
+
+.btn:hover{
+
+background:#ffc400;
+
+}
+.toast{
+    position:fixed;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%) translateY(100px);
+    
+    background:#28a745;
+    color:white;
+    padding:12px 20px;
+    border-radius:8px;
+    font-weight:bold;
+
+    opacity:0;
+    transition:all 0.4s ease;
+}
+
+.toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+}
+.close-modal{
+    position:absolute;
+    top:80px;
+    right:380px;
+
+    background:#ff4d4d;
+    color:white;
+
+    border:none;
+    border-radius:50%;
+
+    width:32px;
+    height:32px;
+
+    font-size:16px;
+    cursor:pointer;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.close-modal:hover{
+    background:#ff1a1a;
+}
+.alert-overlay{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.6);
+
+    display:none; /* escondido */
+    justify-content:center;
+    align-items:center;
+}
+
+.product-box{
+    width:90%;
+    max-width:700px;
+    height:500px;
+    background:#1e1e1e;
+    border-radius:10px;
+    display:flex;
+    overflow:hidden;
+}
+
+.categories{
+    width:35%;
+    background:#111;
+    display:flex;
+    flex-direction:column;
+}
+
+.categories div{
+    padding:15px;
+    border-bottom:1px solid #333;
+    cursor:pointer;
+    color:white;
+}
+
+.categories div:hover{
+    background:#333;
+}
+
+.products{
+    width:65%;
+    padding:15px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    overflow:auto;
+}
+
+.product{
+    background:#333;
+    color:white;
+    padding:10px;
+    border-radius:6px;
+    cursor:pointer;
+    width:120px;
+    text-align:center;
+}
+
+.product:hover{
+    background:#555;
+}
+
+/* RESPONSIVO */
+
+@media (max-width:768px){
+
+.nav{
+display:none;
+}
+
+.menu-btn{
+display:block;
+}
+
+}
+
+@media (max-width:600px){
+
+.mesa-info{
+padding:15px;
+}
+
+.pedido{
+font-size:16px;
+}
+
+}

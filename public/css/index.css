@@ -1,0 +1,282 @@
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Segoe UI', Arial, sans-serif;
+}
+
+body{
+background:radial-gradient(circle at top,#1a1a1a,#000);
+color:white;
+min-height:100vh;
+}
+
+/* HEADER */
+
+header{
+
+background:linear-gradient(90deg,#FFD400,#ffbf00);
+
+color:#000;
+
+font-size:22px;
+
+font-weight:bold;
+
+display:flex;
+
+align-items:center;
+
+justify-content:space-between;
+
+padding:15px 25px;
+
+letter-spacing:1px;
+
+box-shadow:0 4px 10px rgba(0,0,0,0.6);
+
+position:sticky;
+
+top:0;
+
+z-index:100;
+
+}
+
+.logo{
+
+font-size:22px;
+
+}
+
+/* MENU NORMAL */
+
+.nav{
+
+display:flex;
+
+gap:20px;
+
+}
+
+.nav a{
+
+text-decoration:none;
+
+color:black;
+
+font-weight:bold;
+
+transition:0.2s;
+
+}
+
+.nav a:hover{
+
+transform:scale(1.1);
+
+}
+
+/* BOTÃO SANDUICHE */
+
+.menu-btn{
+
+font-size:26px;
+
+cursor:pointer;
+
+display:none;
+
+}
+
+/* SIDEBAR MOBILE */
+
+.sidebar{
+
+position:fixed;
+
+top:0;
+
+left:-260px;
+
+width:260px;
+
+height:100%;
+
+background:#111;
+
+padding:30px;
+
+transition:0.3s;
+
+box-shadow:5px 0 15px rgba(0,0,0,0.7);
+
+z-index:200;
+
+}
+
+.sidebar.active{
+
+left:0;
+
+}
+
+.sidebar h2{
+
+color:#FFD400;
+
+margin-bottom:20px;
+
+}
+
+.sidebar a{
+
+display:block;
+
+color:white;
+
+text-decoration:none;
+
+margin:15px 0;
+
+font-size:18px;
+
+transition:0.2s;
+
+}
+
+.sidebar a:hover{
+
+color:#FFD400;
+
+}
+
+/* CONTAINER DAS MESAS */
+
+#mesasContainer{
+
+max-width:1200px;
+
+margin:auto;
+
+padding:30px;
+
+display:grid;
+
+grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+
+gap:25px;
+
+}
+
+/* CARD DA MESA */
+
+.mesa{
+
+background:#1c1c1c;
+
+border-radius:15px;
+
+height:140px;
+
+display:flex;
+
+flex-direction:column;
+
+justify-content:center;
+
+align-items:center;
+
+font-size:22px;
+
+font-weight:bold;
+
+cursor:pointer;
+
+transition:0.25s;
+
+border:3px solid transparent;
+
+box-shadow:0 6px 20px rgba(0,0,0,0.5);
+
+}
+
+/* HOVER */
+
+.mesa:hover{
+
+transform:scale(1.05);
+
+box-shadow:0 10px 30px rgba(0,0,0,0.8);
+
+}
+
+/* NUMERO */
+
+.numero{
+
+font-size:32px;
+
+margin-bottom:5px;
+
+}
+
+/* STATUS */
+
+.status{
+
+font-size:14px;
+
+opacity:0.8;
+
+}
+
+/* STATUS CORES */
+
+.livre{
+
+border-color:#2ecc71;
+
+}
+
+.ocupada{
+
+border-color:#e74c3c;
+
+}
+
+.fechando{
+
+border-color:#f1c40f;
+
+color:#f1c40f;
+
+}
+
+/* RESPONSIVO */
+
+@media (max-width:768px){
+
+.nav{
+
+display:none;
+
+}
+
+.menu-btn{
+
+display:block;
+
+}
+
+}
+
+@media (max-width:600px){
+
+#mesasContainer{
+
+grid-template-columns:repeat(2,1fr);
+
+}
+
+}

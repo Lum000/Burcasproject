@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+<meta charset="UTF-8">
+<title>Cadastrar Produto</title>
+
+<style>
+
+body{
+    font-family:Arial;
+    background:#121212;
+    color:white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+
+.box{
+    background:#1e1e1e;
+    padding:25px;
+    border-radius:10px;
+    width:320px;
+}
+
+input,select{
+    width:100%;
+    padding:8px;
+    margin-top:10px;
+    border:none;
+    border-radius:5px;
+}
+
+button{
+    width:100%;
+    padding:10px;
+    margin-top:15px;
+    background:#28a745;
+    border:none;
+    color:white;
+    font-weight:bold;
+    border-radius:5px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#1f8c39;
+}
+
+.preview{
+    margin-top:10px;
+    width:100%;
+    height:120px;
+    background:#333;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:5px;
+    overflow:hidden;
+}
+
+.preview img{
+    width:100%;
+    object-fit:cover;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="box">
+
+<h2>Adicionar Produto</h2>
+
+<input id="nome" placeholder="Nome do produto">
+
+<input id="preco" type="number" placeholder="Preço">
+
+<select id="categoria">
+<option value="lanches">Lanches</option>
+<option value="porcoes">Porções</option>
+<option value="bebidas">Bebidas</option>
+<option value="sobremesas">Sobremesas</option>
+<option value="derivados">Derivados</option>
+</select>
+
+<input type="file" id="imagem" accept="image/*" onchange="previewImg()">
+
+<div class="preview">
+<img id="previewImg">
+</div>
+
+<button onclick="addProduct()">Salvar Produto</button>
+
+</div>
+
+<script>
+
+function previewImg(){
+
+const file = document.getElementById("imagem").files[0]
+
+if(file){
+document.getElementById("previewImg").src = URL.createObjectURL(file)
+}
+
+}
+
+async function addProduct(){
+
+const nome = document.getElementById("nome").value
+const preco = document.getElementById("preco").value
+const categoria = document.getElementById("categoria").value
+const imagem = document.getElementById("imagem").files[0]
+
+const formData = new FormData()
+
+formData.append("nome",nome)
+formData.append("preco",preco)
+formData.append("categoria",categoria)
+formData.append("imagem",imagem)
+
+await fetch("/addProduct",{
+method:"POST",
+body:formData
+})
+
+alert("Produto cadastrado!")
+
+}
+
+</script>
+
+</body>
+</html>
