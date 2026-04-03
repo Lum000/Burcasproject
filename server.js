@@ -11,7 +11,18 @@ const db = new sqlite3.Database("lanchonete.db")
 
 // cria tabelas
 db.serialize(() => {
+  
+  /* CRIAÇÃO TABELA INFO DAS LOJAS */
+  db.run(`
+    CREATE TABLE IF NOT EXISTS lojasInfo
+    (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT UNIQUE,
+      logo TEXT
+    )
+  `)
 
+  /*Tabela das Mesas */
   db.run(`
     CREATE TABLE IF NOT EXISTS mesas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,6 +54,8 @@ db.serialize(() => {
   `)
 
 })
+
+/* Armazenar as logos e imagens */
 const storage = multer.diskStorage({
 
 destination: function(req,file,cb){
@@ -133,6 +146,18 @@ res.send("ok")
 
 })
 
+app.get("/addproduto/:productid",(req,res)=>{
+  const id = req.params.productid
+  db.get("SELECT * FROM produtos WHERE id = ?",[id],(err,row) => {
+    if(err){
+      console.log("Impossivel adicionar o produto a mesa " + err)
+    }
+    if(row){
+      res.json(row)
+    }
+  })
+})
+
 /*Procurar produto por categoria */
 app.get("/products/:category",(req,res) =>{
     db.all("SELECT * FROM produtos WHERE categoria = ?",[req.params.category],(err,produto) =>{
@@ -141,7 +166,6 @@ app.get("/products/:category",(req,res) =>{
         }
         if(produto) {
             res.json(produto)
-            console.log(produto)
         }
     })
 })

@@ -1,4 +1,5 @@
 
+
 function toggleMenu(){
 
 const sidebar = document.getElementById("sidebar")
@@ -59,9 +60,31 @@ function closeAlert(){
 
 async function showCategory(category){
     const res = await fetch("/products/" + category)
+
+
+    document.querySelectorAll(".categories div").forEach(cat=>{
+    cat.classList.remove("active")
+    })
+
+    /* adiciona na clicada */
+    const activeCategory = document.getElementById(category)
+    activeCategory.classList.add("active")
+
+
     const res_body = await res.json()
     console.log(res_body)
     renderProducts(res_body)
+}
+async function addProdutoMesa(body) {
+    
+}
+async function pegarProduto(id){
+    console.log(id)
+    const res = await fetch("/addproduto/" + id)
+    const result = await res.json()
+    console.log(result)
+    addProdutoMesa(res.body)
+
 }
 
 function renderProducts(lista){
@@ -70,16 +93,16 @@ function renderProducts(lista){
     divProducts.innerHTML = ""
     lista.forEach(produto =>{
             divProducts.innerHTML += `
-        <div class="product-item" data-id="${produto.id}" onclick="addProduct(${produto.id})">
-        <img src="/uploads/${produto.img}"
+        <div class="product-item" data-id="${produto.id}">
+            <img src="/uploads/${produto.img}">
 
-        <div class="product-name">
-            ${produto.nome}
-        </div>
-        <div class="preco">
-            R$ ${produto.preco}
-        </div>
-        <button class="add">Adicionar</button>
+            <div class="product-name">
+                ${produto.nome}
+            </div>
+            <div class="preco">
+                R$ ${produto.preco}
+            </div>
+            <button class="add" onclick="pegarProduto(${produto.id})">Adicionar</button>
 
         </div>
     `
