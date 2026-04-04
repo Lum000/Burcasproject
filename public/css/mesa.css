@@ -191,22 +191,114 @@ margin-bottom:15px;
 
 /* ITEM PEDIDO */
 
-.pedido{
+/* Container que guarda a lista de itens */
 
-display:flex;
-
-justify-content:space-between;
-
-padding:12px 0;
-
-border-bottom:1px solid #333;
-
-font-size:18px;
-
+/* Card individual de cada produto no pedido */
+.pedido-item {
+    display: flex;
+    align-items: center;
+    background: #ffffff41;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border: 1px solid #eee;
+    transition: transform 0.2s;
 }
 
-.pedido:last-child{
-border-bottom:none;
+.pedido-item:hover {
+    transform: translateY(-2px);
+}
+
+.item-img {
+    font-size: 1.5rem;
+    margin-right: 15px;
+}
+.item-img img{
+    width: 80px;
+    height: 80px;
+}
+
+.item-detalhes {
+    flex-grow: 1; /* Faz os detalhes ocuparem o espaço restante */
+    display: flex;
+    flex-direction: column;
+}
+
+.item-nome {
+    font-weight: bold;
+    color: #1c1c1c;
+    font-size: 0.95rem;
+}
+
+.item-preco {
+    color: #27ae60;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Controles de quantidade (+ e -) */
+.item-controles {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 15px;
+    background: #f8f9fa;
+    padding: 5px 10px;
+    border-radius: 20px;
+}
+
+.btn-qtd {
+    background: #fff;
+    border: 1px solid #ddd;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+
+.btn-qtd:hover {
+    background: #e74c3c;
+    color: white;
+    border-color: #e74c3c;
+}
+
+.qtd-numero {
+    font-weight: bold;
+    color: black;
+    min-width: 20px;
+    text-align: center;
+}
+
+/* Botão de lixeira */
+.btn-remover {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    opacity: 0.6;
+    transition: 0.2s;
+}
+
+.btn-remover:hover {
+    opacity: 1;
+    background-color: #ffffff6d;
+    transform: scale(1.1);
+}
+
+/* Scrollbar personalizada para a lista */
+.itens-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.itens-container::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 10px;
 }
 
 /* TOTAL */
@@ -308,6 +400,60 @@ background:#ffc400;
     display:none; /* escondido */
     justify-content:center;
     align-items:center;
+}
+
+
+/* Estilos específicos para o Modal de Admin */
+.admin-box {
+    max-width: 350px; /* Menor que o de produtos */
+    padding: 30px;
+    text-align: center;
+}
+
+.admin-header h3 {
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.admin-header p {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.admin-body input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #eee;
+    border-radius: 8px;
+    font-size: 1rem;
+    margin-bottom: 15px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.admin-body input:focus {
+    border-color: #e74c3c; /* Cor de destaque do seu tema */
+}
+
+.btn-confirm {
+    width: 100%;
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    padding: 12px;
+    font-weight: bold;
+}
+
+.btn-confirm:hover {
+    background-color: #219150;
+}
+
+.error-msg {
+    color: #e74c3c;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+    display: none; /* Escondido por padrão */
 }
 
 .product-box{

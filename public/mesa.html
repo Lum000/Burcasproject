@@ -100,6 +100,24 @@ Total: R$37
 <div id="toastAdd" class="toast">
 ✔ Produto adicionado
 </div>
+
+<div id="adminModal" class="alert-overlay">
+    <div class="product-box admin-box">
+        <button class="close-modal" onclick="closeAdminModal()">✖</button>
+        
+        <div class="admin-header">
+            <h3>Área Restrita</h3>
+            <p>Insira a senha de administrador</p>
+        </div>
+
+        <div class="admin-body">
+            <input type="password" id="adminPassword" placeholder="Senha" autofocus>
+            <div id="adminError" class="error-msg">Senha incorreta!</div>
+            <button class="btn btn-confirm" id="confirmarSenha">Confirmar</button>
+        </div>
+    </div>
+</div>
+
 </body>
 <script src="js/mesa.js"></script>
 </html>

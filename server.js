@@ -91,12 +91,14 @@ app.get ("/mesa/:id",(req,res)=>{
 
 /* Pega os produtos existentes na mesa */
 
-app.get ("/mesa/:id/products/:mesa_id",(req,res) =>{
-    db.all("SELECT * FROM pedidos WHERE mesa_id = ?",[req.params.mesa_id],(err,result) =>{
+app.get ("/mesa/:id/products/:mesa_id", (req,res) =>{
+  const mesa_id = req.params.mesa_id
+    db.all("SELECT * FROM pedidos WHERE mesa_id = ?",[mesa_id],async (err,result) =>{
         if(err){
             console.log("Erro ao recuperar os produtos da mesa " + err)
         }
         if(result){
+            await db.run("UPDATE mesas SET status = 'ocupada' WHERE id = ?", [mesa_id])
             res.json(result)
         }
     })
@@ -135,7 +137,6 @@ app.post("/addProduct", upload.single("imagem"), (req,res)=>{
 const {nome, preco, categoria} = req.body
 const imagem = req.file.filename
 
-console.log(nome,preco,categoria,imagem)
 
 db.run(
 "INSERT INTO produtos (nome,preco,categoria,img) VALUES (?,?,?,?)",
@@ -146,7 +147,10 @@ res.send("ok")
 
 })
 
-app.get("/addproduto/:productid",(req,res)=>{
+
+/* Pega tudo do produto clickado */
+
+app.get("/getprodutobody/:productid",(req,res)=>{
   const id = req.params.productid
   db.get("SELECT * FROM produtos WHERE id = ?",[id],(err,row) => {
     if(err){
@@ -171,11 +175,90 @@ app.get("/products/:category",(req,res) =>{
 })
 
 /*Adicionar pdoruto a Mesa */
-app.post("/addproduct/:mesaid/:productid",(req,res) =>{
-    console.log("Adicionando produto a mesa")
+app.get("/addproduct/:mesaid/:productid", async (req,res) =>{
+    try{
+      const id = req.params.productid
+      const mesa_id = req.params.mesaid
+      const query = await db.get("SELECT * FROM pedidos WHERE mesa_id = ? AND status = 'aberto'", [mesa_id])
+      if (!query || Object.keys(query).length === 0){
+        db.run("INSERT INTO pedidos(mesa_id,produto_id,quantidade,status,hora) VALUES(?,?,?,?,?)", [mesa_id,id,1,'aberto',new Date().toISOString()])
+      }
+      else{
+        db.run("UPDATE pedidos SET quantidade = quantidade + 1 WHERE mesa_id = ? AND produto_id = ? ",[mesa_id,id])
+      }
+
+      res.status(200).json({message: "Produto Adicionado com Sucesso !"})
+      
+    }
+    catch (err){
+      console.log("ERRO 500 NO SERVIDOR " + err)
+    }
+})
+/*  Atualiza a quantidade do produto especifico daquela mesa */
+
+app.get('/addMore/:productid/:mesaid',  async (req,res) =>{
+  const product_id = req.params.productid
+  const mesa_id = req.params.mesaid
+
+  try{
+    db.run(
+    "UPDATE pedidos SET quantidade = quantidade + 1 WHERE mesa_id = ? AND produto_id = ? AND status = 'aberto' ",
+    [mesa_id, product_id],
+    function(err) {
+      if (err) {
+        console.error(err.message);
+        return;
+      }
+      console.log(`Linhas alteradas: ${this.changes}`); 
+      console.log(`Último ID inserido: ${this.lastID}`);
+    }
+    );
+    res.status(200).json({message: "Produto alterado a quantidade com sucesso ! "})
+  }
+  catch(err){
+    res.status(500).json({message: "Erro ao alterar a quantidade !" + err})
+  }
 })
 
 
+/*Diminui a quantidade do produto  */
+app.get('/menosUm/:productid/:mesaid',  async (req,res) =>{
+  const product_id = req.params.productid
+  const mesa_id = req.params.mesaid
+
+  try{
+    db.run(
+    "UPDATE pedidos SET quantidade = quantidade - 1 WHERE mesa_id = ? AND produto_id = ? AND status = 'aberto' ",
+    [mesa_id, product_id],
+    function(err) {
+      if (err) {
+        console.error(err.message);
+        return;
+      }
+      console.log(`Linhas alteradas: ${this.changes}`); 
+      console.log(`Último ID inserido: ${this.lastID}`);
+    }
+    );
+    res.status(200).json({message: "Produto alterado a quantidade com sucesso ! "})
+  }
+  catch(err){
+    res.status(500).json({message: "Erro ao alterar a quantidade !" + err})
+  }
+})
+
+/*Apaga o produto da mesa */
+
+app.get("/deletarProduto/:productid/:mesaid"), (req,res) =>{
+  const product_id = req.params.productid
+  const mesa_id = req.params.mesaid
+  try{
+    db.run("DELETE  FROM pedidos WHERE product_id = ? AND mesa_id ? AND status = 'aberta'",[product_id,mesa_id])
+    res.status(200).json({message: "Produto Apagado com Sucesso !!!"})
+  }
+  catch(err){
+    res.status(500).json({message: "Erro ao apagar produto da mesa ! " + err})
+  }
+}
 
 /* Atualiza quantidade de mesas via admin console */
 
@@ -184,7 +267,6 @@ app.post("/admin/mesas",(req,res)=>{
 
 try{
 
-console.log("Body recebido:", req.body)
 
 const mesas = parseInt(req.body.mesas)
 
