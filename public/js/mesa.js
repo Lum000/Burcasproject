@@ -135,11 +135,13 @@ async function getProducts(id,mesa) {
 }
 async function deletarItem(productid,mesaid) {
     try{
-        await fetch('/deletarProduto/' + productid + '/' + mesaid)
+        const response = await fetch(`/deleteproduct/${productid}/${mesaid}`, {
+        method: 'DELETE'
+        })
         verifyMesa()
     }
     catch(err){
-        console.log("Erro ao alterar a qauntidade " + err)
+        console.log("Erro ao apagar item  " + err)
     }
 }
 
@@ -199,6 +201,8 @@ async function addProdutoMesa(product_id,mesa_id) {
     try{
         await fetch('/addproduct/' + mesa_id + '/' + product_id)
         showToast()
+        closeAlert()
+        verifyMesa()
     }
     catch(err){
         console.log("Erro ao adicionar produto " + err)

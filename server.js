@@ -179,15 +179,27 @@ app.get("/addproduct/:mesaid/:productid", async (req,res) =>{
     try{
       const id = req.params.productid
       const mesa_id = req.params.mesaid
-      const query = await db.get("SELECT * FROM pedidos WHERE mesa_id = ? AND status = 'aberto'", [mesa_id])
-      if (!query || Object.keys(query).length === 0){
-        db.run("INSERT INTO pedidos(mesa_id,produto_id,quantidade,status,hora) VALUES(?,?,?,?,?)", [mesa_id,id,1,'aberto',new Date().toISOString()])
-      }
-      else{
-        db.run("UPDATE pedidos SET quantidade = quantidade + 1 WHERE mesa_id = ? AND produto_id = ? ",[mesa_id,id])
-      }
+      db.get("SELECT * FROM pedidos WHERE mesa_id = ? AND produto_id = ? AND status = 'aberto'", [mesa_id, id], (err, row) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).send("Erro no banco");
+        }
 
-      res.status(200).json({message: "Produto Adicionado com Sucesso !"})
+        if (!row) {
+            // INSERT - Não existia
+            db.run("INSERT INTO pedidos (mesa_id, produto_id, quantidade, status, hora) VALUES (?,?,?,?,?)", 
+            [mesa_id, id, 1, 'aberto', new Date().toISOString()], () => {
+                res.status(200).json({ message: "Inserido!" });
+            });
+        } else {
+            // UPDATE - Já existia
+            db.run("UPDATE pedidos SET quantidade = quantidade + 1 WHERE mesa_id = ? AND produto_id = ? AND status = 'aberto'", 
+            [mesa_id, id], () => {
+                res.status(200).json({ message: "Atualizado!" });
+            });
+        }
+    });
+
       
     }
     catch (err){
@@ -248,17 +260,27 @@ app.get('/menosUm/:productid/:mesaid',  async (req,res) =>{
 
 /*Apaga o produto da mesa */
 
-app.get("/deletarProduto/:productid/:mesaid"), (req,res) =>{
-  const product_id = req.params.productid
-  const mesa_id = req.params.mesaid
-  try{
-    db.run("DELETE  FROM pedidos WHERE product_id = ? AND mesa_id ? AND status = 'aberta'",[product_id,mesa_id])
-    res.status(200).json({message: "Produto Apagado com Sucesso !!!"})
-  }
-  catch(err){
-    res.status(500).json({message: "Erro ao apagar produto da mesa ! " + err})
-  }
-}
+app.delete("/deleteproduct/:productid/:mesaid", async (req, res) => {
+    console.log("Rodando o delete")
+    try {
+        const { mesaid, productid } = req.params;
+
+        
+        const result = await db.run(
+            "DELETE FROM pedidos WHERE mesa_id = ? AND produto_id = ? AND status = 'aberto'",
+            [mesaid, productid]
+        );
+
+        if (result.changes > 0) {
+            res.status(200).json({ message: "Produto removido com sucesso!" });
+        } else {
+            res.status(404).json({ error: "Produto não encontrado." });
+        }
+    } catch (erro) {
+        console.error("Erro ao deletar:", erro);
+        res.status(500).json({ error: "Erro interno no servidor" });
+    }
+});
 
 /* Atualiza quantidade de mesas via admin console */
 
