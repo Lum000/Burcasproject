@@ -1,0 +1,53 @@
+/* Layout em Grade para 5 colunas */
+.historico-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 0.8fr 2fr 0.5fr 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 20px;
+    border-bottom: 1px solid #333;
+}
+
+.data-hora {
+    font-family: 'Courier New', Courier, monospace;
+    color: #FFD400;
+    font-size: 0.9rem;
+}
+
+.num-mesa {
+    font-weight: bold;
+    color: #fff;
+}
+
+/* Badges de Status no Histórico */
+.entregue { background-color: #2ecc71; color: white; }
+.cancelado { background-color: #e74c3c; color: white; }
+.aberto { background-color: #f1c40f; color: black; }
+
+.filtros-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.filtros-container button {
+    background: #333;
+    color: white;
+    border: 1px solid #FFD400;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+    font-weight: bold;
+}
+
+.filtros-container button:hover {
+    background: #FFD400;
+    color: black;
+}
+
+.filtros-container .btn-destaque {
+    background: #FFD400;
+    color: black;
+}

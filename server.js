@@ -248,17 +248,43 @@ app.get('/menosUm/:productid/:mesaid',  async (req,res) =>{
 
 /*Apaga o produto da mesa */
 
-app.get("/deletarProduto/:productid/:mesaid"), (req,res) =>{
-  const product_id = req.params.productid
-  const mesa_id = req.params.mesaid
-  try{
-    db.run("DELETE  FROM pedidos WHERE product_id = ? AND mesa_id ? AND status = 'aberta'",[product_id,mesa_id])
-    res.status(200).json({message: "Produto Apagado com Sucesso !!!"})
-  }
-  catch(err){
-    res.status(500).json({message: "Erro ao apagar produto da mesa ! " + err})
-  }
-}
+app.get("/deletarProduto/:productid/:mesaid", (req,res) =>{
+  const {productid, mesaid} = req.params;
+
+  db.run("DELETE FROM pedidos WHERE produto_id = ? AND mesa_id = ? AND status = 'aberto' ", [productid,mesaid],
+    function(err){
+      if(err){
+        return res.status(500).json({message: "Erro ao apagar o produto de ID " + productid + " Erro : " + err.message})
+      }
+
+      if(this.changes === 0 ){
+        return res.status(400).json({message: "Nenhum Produto Encontrado"})
+      }
+      return res.status(200).json({message: "Produto de ID " + productid + " Apagado com Sucesso !!!!"})
+    }
+  )
+}) 
+
+
+/*Historico de Pedidos */
+app.get("/historico-filtrado/:dias", (req, res) => {
+    const { dias } = req.params;
+    console.log("Filtrando pedidos dos últimos dias:", dias);
+
+    const query = `
+        SELECT * FROM pedidos 
+        WHERE datetime(hora, 'localtime') >= datetime('now', 'localtime', '-' || ? || ' days')
+        ORDER BY hora DESC`;
+
+    db.all(query, [dias], (err, rows) => {
+        if (err) {
+            console.error("Erro no SQL:", err.message);
+            return res.status(500).json({ error: err.message });
+        }
+        console.log(`Encontrados ${rows.length} pedidos.`);
+        res.json(rows);
+    });
+});
 
 /* Atualiza quantidade de mesas via admin console */
 

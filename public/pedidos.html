@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Itens do Pedido - Lanchonete</title>
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/pedidos.css">
+</head>
+<body>
+
+    <div class="sidebar" id="sidebar">
+        <h2>Painel</h2>
+        <a href="/">Mesas</a>
+        <a href="pedidos.html">Pedidos</a>
+        <a href="cadastro_produto.html">Produtos</a>
+        <a href="admin.html">Admin</a>
+        <a href="#">Relatórios</a>
+    </div>
+
+    <header>
+        <div class="logo">🍔 Lanchonete</div>
+        <nav class="nav">
+            <a href="/">Mesas</a>
+            <a href="pedidos.html">Pedidos</a>
+            <a href="cadastro_produto.html">Produtos</a>
+            <a href="admin.html">Admin</a>
+        </nav>
+        <div class="menu-btn" onclick="toggleMenu()">☰</div>
+    </header>
+
+    <main class="container-pedidos">
+        <div class="info-mesa">
+            <h1>📜 Histórico de Pedidos</h1>
+            <div class="filtros-container">
+                <button onclick="carregarHistorico(1, this)"class="btn-destaque">Hoje</button>
+                <button onclick="carregarHistorico(7, this)">Últimos 7 dias</button>
+                <button onclick="carregarHistorico(12, this)">Últimos 12 dias</button>
+                <button onclick="carregarHistorico(30, this)">Mês Atual</button>
+            </div>
+        </div>
+
+        <div class="card-lista">
+            <div class="header-lista historico-grid">
+                <span>Data / Hora</span>
+                <span>Mesa</span>
+                <span>Produto</span>
+                <span>Qtd</span>
+                <span>Status</span>
+            </div>
+            
+            <div id="listaHistorico">
+                <div class="item-pedido historico-grid">
+                    <span class="data-hora">27/10/2023 14:30</span>
+                    <span class="num-mesa">Mesa 05</span>
+                    <span class="nome-prod">X-Tudo Especial</span>
+                    <span class="item-qtd">2</span>
+                    <span class="status-badge entregue">Entregue</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/pedidos.js"></script>
+</body>
+</html>
