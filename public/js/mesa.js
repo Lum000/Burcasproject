@@ -101,7 +101,7 @@ async function getProducts(id,mesa) {
             const div = document.createElement("div");
             div.innerHTML = ` 
                 <div class="pedido-item">
-                    <div class="item-img"><img src='/uploads/${dados.img}' style="width:50px; border-radius:5px;"></div>
+                    <div class="item-img"><img src='/uploads/${dados.img}' style="border-radius:10px;"></div>
                     <div class="item-detalhes">
                         <span class="item-nome">${dados.nome}</span>
                         <span class="item-preco">R$ ${dados.preco.toFixed(2)}</span>
@@ -122,12 +122,17 @@ async function getProducts(id,mesa) {
         const footer = document.createElement("div");
         footer.innerHTML = `
             <div class="total" style="margin-top: 20px; font-weight: bold; font-size: 1.2rem;">
-                Total: R$ ${totalGeral.toFixed(2)}
+                Total: <span> R$ ${totalGeral.toFixed(2)} </span> 
             </div>
             <br>
-            <button class="btn" onclick="openAdd()">
-                + Adicionar Produto
-            </button>
+            <div class="footer">
+                <button class="btn-adicionar" onclick="openAdd()">
+                    <span class="icon">+</span> Adicionar Produto
+                </button>
+                <button class="btn-fechar" onclick="fecharComanda()">
+                    <span>✅</span> Fechar Comanda
+                </button>
+            </div>
         `;
         divPedidos.appendChild(footer);
     }
@@ -135,9 +140,9 @@ async function getProducts(id,mesa) {
 }
 async function deletarItem(productid,mesaid) {
     try{
-        const response = await fetch(`/deleteproduct/${productid}/${mesaid}`, {
-        method: 'DELETE'
-        })
+        const req  = await fetch('/deletarProduto/' + productid + '/' + mesaid)
+        const res = await req.json()
+        console.log(res)
         verifyMesa()
     }
     catch(err){
@@ -202,7 +207,7 @@ async function addProdutoMesa(product_id,mesa_id) {
         await fetch('/addproduct/' + mesa_id + '/' + product_id)
         showToast()
         closeAlert()
-        verifyMesa()
+        getProducts(mesa_id,mesa)
     }
     catch(err){
         console.log("Erro ao adicionar produto " + err)
