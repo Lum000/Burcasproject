@@ -1,7 +1,9 @@
 const express = require("express")
 const sqlite3 = require("sqlite3").verbose()
 const path = require("path")
+
 const multer = require("multer")
+const res = require("express/lib/response")
 
 const app = express()
 app.use(express.json())
@@ -87,6 +89,7 @@ app.get ("/mesa/:id",(req,res)=>{
         }
     })
 })
+/* Imprimir dados */
 
 
 /* Pega os produtos existentes na mesa */
@@ -97,12 +100,135 @@ app.get ("/mesa/:id/products/:mesa_id", (req,res) =>{
         if(err){
             console.log("Erro ao recuperar os produtos da mesa " + err)
         }
-        if(result){
+        if(result && result.length > 0){
             await db.run("UPDATE mesas SET status = 'ocupada' WHERE id = ?", [mesa_id])
             res.json(result)
         }
+        else{
+          await db.run("UPDATE mesas SET status = 'livre' WHERE id = ?", [mesa_id])
+          res.status(200).json({message: "Mesa Livre !"})
+        }
+
     })
 })
+
+/*Pega os produtos e dados dele para impressao baseado na mesa */
+
+app.get("/impressao/:mesa_id", async (req, res) => {
+    const mesa_id = req.params.mesa_id;
+
+    try {
+        db.all("SELECT * FROM pedidos WHERE mesa_id = ? AND status = 'aberto'", [mesa_id],async (err,itensMesa) =>{
+          if (!itensMesa || itensMesa.length === 0) {
+              return res.status(404).json({ message: "Nenhum pedido aberto para esta mesa." });
+          }
+          let processados = 0;
+          let itenFinal = [];
+          itensMesa.forEach((item) => {
+            db.get("SELECT * FROM produtos WHERE id = ?",[item.produto_id], (err,detalhesProduto) =>{
+              processados++;
+
+              if(detalhesProduto){
+                itenFinal.push({
+                  ...item,
+                  nome: detalhesProduto.nome,
+                  preco: detalhesProduto.preco,
+                  quantidade: item.quantidade
+                });
+              }
+              if(processados === itensMesa.length){
+                res.json(itenFinal)
+              }
+            })
+          })
+        });
+
+    } catch (error) {
+        console.error("Erro na rota de impressão:", error);
+        res.status(500).json({ error: "Erro interno ao processar dados da mesa. " + error.message });
+    }
+});
+
+
+
+
+
+const ThermalPrinter = require("node-thermal-printer").printer;
+const Types = require("node-thermal-printer").types;
+
+app.post("/imprimir-comando", async (req, res) => {
+    const { mesa_id, itens } = req.body;
+
+    // Inicialização segura
+    let printer = new ThermalPrinter({
+        type: Types.EPSON, // A Bematech MP-4200 aceita comandos EPSON (ESC/POS) perfeitamente
+        interface: '\\\\localhost\\BEMATECH', // Verifique se o nome no compartilhamento é EXATAMENTE esse
+        characterSet: 'PC860_PORTUGUESE', // Conjunto de caracteres para PT-BR
+        removeSpecialCharacters: false,
+        width: 42
+    });
+
+    // Teste rápido para validar se o tipo foi reconhecido
+    if (!printer) {
+        return res.status(500).json({ error: "Falha ao instanciar a impressora." });
+    }
+    try {
+        printer.alignCenter();
+        printer.println("BURCAS LANCHONETE");
+        printer.println("------------------------------------------");
+        
+        printer.alignLeft();
+        printer.println(`MESA: ${mesa_id}`);
+        printer.println(`DATA: ${new Date().toLocaleString('pt-BR')}`);
+        printer.println("------------------------------------------");
+        
+
+        let total = 0;
+        itens.forEach(item => {
+            valortotalprod = item.preco * item.quantidade;
+            total += item.preco * item.quantidade;
+            // Formatando a linha manualmente para garantir alinhamento
+            const nome = item.nome.substring(0, 18).padEnd(19);
+            const qtd = `x${item.quantidade}`.padEnd(5);
+            const preco = `R$${item.preco.toFixed(2)}`.padStart(8);
+            const precofinal = `R${valortotalprod.toFixed(2)}`.padStart(10)
+            printer.println(`${nome}${qtd}${preco}${precofinal}`);
+        });
+        const valorTotal = total.toFixed(2);
+        const valorDividido = (total / 2).toFixed(2);
+
+        printer.println("--------------------------------");
+        printer.alignRight();
+        printer.bold(true);
+        printer.println(`TOTAL: R$ ${valorTotal}`);
+        printer.println(`Total dividido em 2 pessoas : 2x R$ ${valorDividido}`);
+        printer.bold(false);
+
+        // No node-thermal-printer, usamos newLine() repetidamente ou um comando bruto
+        printer.newLine();
+        printer.newLine();
+        printer.newLine();
+        printer.newLine();
+
+        printer.cut();
+
+        const success = await printer.execute();
+        if (success) {
+            console.log("Impresso com sucesso via Spooler!");
+            res.json({ success: true });
+        } else {
+            throw new Error("O Spooler aceitou o comando, mas a impressora não respondeu.");
+        }
+
+    } catch (error) {
+        console.error("Erro na impressão:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+/*Imprimir */
+
 
 /* Pega as mesas existentes */
 
@@ -163,15 +289,22 @@ app.get("/getprodutobody/:productid",(req,res)=>{
 })
 
 /*Procurar produto por categoria */
-app.get("/products/:category",(req,res) =>{
+app.get("/products/:category", async (req,res) =>{
     db.all("SELECT * FROM produtos WHERE categoria = ?",[req.params.category],(err,produto) =>{
         if(err){
-            console.log("Impossivel recuperar os produtos erro  " + err)
+          console.log("Impossivel recuperar os produtos erro  " + err)
         }
         if(produto) {
-            res.json(produto)
+          res.json(produto)
         }
     })
+})
+
+/*Imprimi Produto0 */
+app.get("/imprimit-produto/:produto_id", async (req,res) =>{
+  const product_id = req.params;
+
+  
 })
 
 /*Adicionar pdoruto a Mesa */
@@ -191,6 +324,7 @@ app.get("/addproduct/:mesaid/:productid", async (req,res) =>{
             [mesa_id, id, 1, 'aberto', new Date().toISOString()], () => {
                 res.status(200).json({ message: "Inserido!" });
             });
+            
         } else {
             // UPDATE - Já existia
             db.run("UPDATE pedidos SET quantidade = quantidade + 1 WHERE mesa_id = ? AND produto_id = ? AND status = 'aberto'", 

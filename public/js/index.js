@@ -1,3 +1,4 @@
+
 async function carregarMesas(){
 
     const res = await fetch("/mesas")
@@ -8,9 +9,10 @@ async function carregarMesas(){
 
     container.innerHTML=""
 
-
     mesas.forEach(mesa=>{
-
+        if(mesas.status === 300){
+            div.classList.add('livre')
+        }
     const div = document.createElement("div")
 
     div.classList.add("mesa")
@@ -44,6 +46,14 @@ function toggleMenu(){
     const sidebar = document.getElementById("sidebar")
 
     sidebar.classList.toggle("active")
+
+}
+
+function toggleMenu(){
+
+const sidebar = document.getElementById("sidebar")
+
+sidebar.classList.toggle("active")
 
 }
 

@@ -118,6 +118,46 @@ Total: R$37
     </div>
 </div>
 
+<div id="modalFecharConta" class="alert-overlay">
+    <div class="product-box checkout-box">
+        <button class="close-modal" onclick="closeCheckout()">✖</button>
+        
+        <div class="checkout-header">
+            <h3>Finalizar Comanda</h3>
+            <p id="labelMesaCheckout">Mesa 01</p>
+        </div>
+
+        <div class="checkout-body">
+            <div class="total-destaque">
+                <span>Total a Pagar</span>
+                <h2 id="valorTotalCheckout">R$ 0,00</h2>
+            </div>
+
+            <div class="opcoes-pagamento">
+                <label>Como deseja pagar?</label>
+                <select id="tipoPagamento" onchange="toggleCheckoutOptions()">
+                    <option value="total">Total da Conta</option>
+                    <option value="dividir">Dividir por Pessoas</option>
+                    <option value="parcial">Pagar Valor Parcial</option>
+                </select>
+            </div>
+
+            <div id="groupDividir" class="input-dinamico" style="display:none;">
+                <label>Dividir por quantas pessoas?</label>
+                <input type="number" id="numPessoas" value="2" min="1" oninput="calcularDivisao()">
+                <p id="resultadoDivisao">Cada um paga: <b>R$ 0,00</b></p>
+            </div>
+
+            <div id="groupParcial" class="input-dinamico" style="display:none;">
+                <label>Quanto deseja pagar agora?</label>
+                <input type="number" id="valorParcial" placeholder="Ex: 50.00">
+            </div>
+
+            <button class="btn btn-pagar" onclick="processarPagamento()">Confirmar Pagamento</button>
+        </div>
+    </div>
+</div>
+
 </body>
 <script src="js/mesa.js"></script>
 </html>

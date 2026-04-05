@@ -59,84 +59,82 @@ window.onclick = function(event) {
     }
 }
 
-async function getProducts(id,mesa) {
-    const res = await fetch(`mesa/${mesa}/products/${id}`)
-    const mesa_products = await res.json()
-    let totalGeral = 0
-    if(!mesa_products[0]){
-        const divPedidos = document.querySelector(".pedidos")
-        divPedidos.innerHTML = ""
+async function getProducts(id, mesa) {
+    const res = await fetch(`mesa/${mesa}/products/${id}`);
+    const mesa_products = await res.json();
+    const divPedidos = document.querySelector(".pedidos");
+    
+    // Limpamos a div logo no início
+    divPedidos.innerHTML = "";
 
-        const div = document.createElement("div")
-
-        div.innerHTML = `SEM PRODUTOS <br>
-        <button class="btn" onclick="openAdd()">
-        + Adicionar Produto
-        </button>`
-
-        divPedidos.appendChild(div)
-    }
-    else {
-        const divPedidos = document.querySelector(".pedidos");
-        
-        // 1. Limpamos a div ANTES do loop para começar do zero
-        divPedidos.innerHTML = "<h2>Pedidos</h2>"; 
-        
-        let totalGeral = 0;
-
-        // 2. Criamos um container para os itens (estética e organização)
-        const listaItens = document.createElement("div");
-        listaItens.className = "lista-itens-scroll"; 
-        divPedidos.appendChild(listaItens);
-
-        for (const item of mesa_products) {
-            // Buscamos os dados do produto específico deste item do loop
-            const dadosreq = await fetch("/getprodutobody/" + item.produto_id);
-            const dados = await dadosreq.json();
-
-            // Cálculo do total
-            totalGeral += dados.preco * item.quantidade;
-
-            // Criamos a div do item individual
-            const div = document.createElement("div");
-            div.innerHTML = ` 
-                <div class="pedido-item">
-                    <div class="item-img"><img src='/uploads/${dados.img}' style="border-radius:10px;"></div>
-                    <div class="item-detalhes">
-                        <span class="item-nome">${dados.nome}</span>
-                        <span class="item-preco">R$ ${dados.preco.toFixed(2)}</span>
-                    </div>
-                    <div class="item-controles">
-                        <button class="btn-qtd" onclick='menosUm(${dados.id}, ${item.mesa_id})'>-</button>
-                        <span class="qtd-numero">${item.quantidade}</span>
-                        <button class="btn-qtd" onclick='maisUm(${dados.id}, ${item.mesa_id})'>+</button>
-                    </div>
-                    <button class="btn-remover" onclick='showAdminModal(${dados.id},${item.mesa_id})'>🗑️</button>
-                </div>
-            `;
-
-            listaItens.appendChild(div);
-        }
-
-        // 3. Após o loop, adicionamos o Total e o Botão de Adicionar (apenas uma vez)
-        const footer = document.createElement("div");
-        footer.innerHTML = `
-            <div class="total" style="margin-top: 20px; font-weight: bold; font-size: 1.2rem;">
-                Total: <span> R$ ${totalGeral.toFixed(2)} </span> 
-            </div>
-            <br>
-            <div class="footer">
+    // Caso a mesa esteja vazia
+    if (!mesa_products || mesa_products.length === 0) {
+        divPedidos.innerHTML = `
+            <div class="sem-produtos">
+                <p>SEM PRODUTOS</p>
                 <button class="btn-adicionar" onclick="openAdd()">
-                    <span class="icon">+</span> Adicionar Produto
+                    + Adicionar Produto
                 </button>
-                <button class="btn-fechar" onclick="fecharComanda()">
-                    <span>✅</span> Fechar Comanda
-                </button>
+            </div>`;
+        return; // Para a execução aqui
+    }
+
+    // Caso tenha produtos
+    divPedidos.innerHTML = "<h2>Pedidos</h2>";
+    let totalGeral = 0;
+
+    const listaItens = document.createElement("div");
+    listaItens.className = "lista-itens-scroll";
+    divPedidos.appendChild(listaItens);
+
+    // Loop pelos itens
+    for (const item of mesa_products) {
+        const dadosreq = await fetch("/getprodutobody/" + item.produto_id);
+        const dados = await dadosreq.json();
+
+        totalGeral += dados.preco * item.quantidade;
+
+        const div = document.createElement("div");
+        div.innerHTML = ` 
+            <div class="pedido-item">
+                <div class="item-img"><img src='/uploads/${dados.img}' style="width:50px; border-radius:10px;"></div>
+                <div class="item-detalhes">
+                    <span class="item-nome">${dados.nome}</span>
+                    <span class="item-preco">R$ ${dados.preco.toFixed(2)}</span>
+                </div>
+                <div class="item-controles">
+                    <button class="btn-qtd" onclick='menosUm(${dados.id}, ${item.mesa_id})'>-</button>
+                    <span class="qtd-numero">${item.quantidade}</span>
+                    <button class="btn-qtd" onclick='maisUm(${dados.id}, ${item.mesa_id})'>+</button>
+                </div>
+                <button class="btn-remover" onclick='showAdminModal(${dados.id}, ${item.mesa_id})'>🗑️</button>
             </div>
         `;
-        divPedidos.appendChild(footer);
+        listaItens.appendChild(div);
     }
 
+    // FOOTER (Fora do loop)
+    // Aqui usamos o 'id' e 'mesa' que vieram dos PARÂMETROS da função getProducts
+    const footer = document.createElement("div");
+    footer.className = "pedido-footer";
+    footer.innerHTML = `
+        <div class="total" style="margin-top: 20px; font-weight: bold; font-size: 1.2rem;">
+            Total: <span> R$ ${totalGeral.toFixed(2)} </span> 
+        </div>
+        <br>
+        <div class="footer-buttons" style="display: flex; gap: 10px;">
+            <button class="btn-adicionar" onclick="openAdd()">
+                <span class="icon">+</span> Adicionar
+            </button>
+            <button class="btn-fechar" onclick="openCheckout(${id}, ${mesa})">
+                <span>✅</span> Fechar Comanda
+            </button>
+            <button class="btn-imprimir" onclick="prepararImpressao(${id})">
+                <span>🖨️</span> Imprimir
+            </button>
+        </div>
+    `;
+    divPedidos.appendChild(footer);
 }
 async function deletarItem(productid,mesaid) {
     try{
@@ -187,7 +185,7 @@ function closeAlert(){
 }
 
 async function showCategory(category){
-    const res = await fetch("/products/" + category)
+    const res = await fetch(`/products/${category}`)
 
 
     document.querySelectorAll(".categories div").forEach(cat=>{
@@ -200,6 +198,7 @@ async function showCategory(category){
 
 
     const res_body = await res.json()
+    
     renderProducts(res_body)
 }
 async function addProdutoMesa(product_id,mesa_id) {
@@ -220,26 +219,34 @@ async function pegarProduto(id){
 
 }
 
-function renderProducts(lista){
+function renderProducts(lista) {
+    const divProducts = document.getElementById("productsList");
     
-    const divProducts = document.getElementById("productsList")
-    divProducts.innerHTML = ""
-    lista.forEach(produto =>{
-            divProducts.innerHTML += `
-        <div class="product-item" data-id="${produto.id}">
-            <img src="/uploads/${produto.img}">
+    divProducts.innerHTML = "";
 
-            <div class="product-name">
-                ${produto.nome}
-            </div>
-            <div class="preco">
-                R$ ${produto.preco}
-            </div>
-            <button class="add" onclick="pegarProduto(${produto.id})">Adicionar</button>
+    let htmlGerado = "";
 
-        </div>
-    `
-    })
+    lista.forEach(produto => {
+        const precoFormatado = Number(produto.preco).toFixed(2).replace('.', ',');
+
+        htmlGerado += `
+            <div class="product-item" data-id="${produto.id}">
+                <img src="/uploads/${produto.img}" alt="${produto.nome}">
+
+                <div class="product-name">
+                    ${produto.nome}
+                </div>
+                <div class="preco">
+                    R$ ${precoFormatado}
+                </div>
+                <button class="add" onclick="pegarProduto(${produto.id})">
+                    Adicionar
+                </button>
+            </div>
+        `;
+    });
+
+    divProducts.innerHTML = htmlGerado;
 }
 
 
@@ -261,5 +268,92 @@ function renderPedidos(lista){
         `
 
     })
+}
+
+
+
+
+/*Open Modal de pagamento  */
+
+
+let valorTotalAtual = 0;
+
+function openCheckout(product_id,mesa_id) {
+    imprimirPedido(product_id,mesa_id)
+    const totalTexto = document.querySelector(".total").innerText;
+    valorTotalAtual = parseFloat(totalTexto.replace("Total: R$ ", "").replace(",", "."));
+
+    document.getElementById("valorTotalCheckout").innerText = `R$ ${valorTotalAtual.toFixed(2).replace(".", ",")}`;
+    document.getElementById("modalFecharConta").style.display = "flex";
+    toggleCheckoutOptions();
+}
+
+function closeCheckout() {
+    document.getElementById("modalFecharConta").style.display = "none";
+}
+
+function toggleCheckoutOptions() {
+    const tipo = document.getElementById("tipoPagamento").value;
+    document.getElementById("groupDividir").style.display = (tipo === "dividir") ? "block" : "none";
+    document.getElementById("groupParcial").style.display = (tipo === "parcial") ? "block" : "none";
+    
+    if(tipo === "dividir") calcularDivisao();
+}
+
+function calcularDivisao() {
+    const pessoas = document.getElementById("numPessoas").value || 1;
+    const divisao = valorTotalAtual / pessoas;
+    document.getElementById("resultadoDivisao").innerHTML = `Cada um paga: <b>R$ ${divisao.toFixed(2).replace(".", ",")}</b>`;
+}
+
+async function processarPagamento() {
+    const tipo = document.getElementById("tipoPagamento").value;
+    let valorPago = valorTotalAtual;
+
+    if (tipo === "parcial") {
+        valorPago = parseFloat(document.getElementById("valorParcial").value);
+        if (!valorPago || valorPago <= 0 || valorPago > valorTotalAtual) {
+            return alert("Insira um valor parcial válido.");
+        }
+    }
+
+    // Aqui você enviaria para o seu backend
+    console.log(`Processando pagamento de R$ ${valorPago} via ${tipo}`);
+
+    alert("Pagamento processado com sucesso!");
+    closeCheckout();
+    location.reload(); // Recarrega para limpar a mesa
+}
+
+/*Imrpessao do pagamento  */
+async function prepararImpressao(mesa_id) {
+    // 1. Busca os dados da mesa (o que você já fez)
+    const req = await fetch(`/impressao/${mesa_id}`);
+    const dadosMesa = await req.json();
+    console.log(mesa_id)
+
+    if (!dadosMesa || dadosMesa.length === 0) {
+        return alert("Mesa vazia!");
+    }
+
+    // 2. Envia para o SERVIDOR imprimir (porque o servidor tem acesso à USB)
+    try {
+        const paimprimia = await fetch("/imprimir-comando", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                mesa_id: mesa_id,
+                itens: dadosMesa
+            })
+        });
+
+        if (paimprimia.ok) {
+            alert("Imprimindo na Bematech...");
+        } else {
+            alert("Erro ao imprimir. Verifique a impressora no servidor.");
+        }
+    } catch (e) {
+        console.error("Erro de rede:", e);
+    }
 }
 verifyMesa()

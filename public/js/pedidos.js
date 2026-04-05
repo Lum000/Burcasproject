@@ -1,3 +1,12 @@
+
+function toggleMenu(){
+
+const sidebar = document.getElementById("sidebar")
+
+sidebar.classList.toggle("active")
+
+}
+
 async function carregarHistorico(dias, elemento) {
     if (elemento) {
         const botoes = document.querySelectorAll('.filtros-container button');
