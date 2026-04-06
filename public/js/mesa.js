@@ -68,15 +68,15 @@ async function getProducts(id, mesa) {
     divPedidos.innerHTML = "";
 
     // Caso a mesa esteja vazia
-    if (!mesa_products || mesa_products.length === 0) {
+    if (!Array.isArray(mesa_products) || mesa_products.length === 0) {
         divPedidos.innerHTML = `
             <div class="sem-produtos">
-                <p>SEM PRODUTOS</p>
+                <p>MESA LIVRE</p>
                 <button class="btn-adicionar" onclick="openAdd()">
                     + Adicionar Produto
                 </button>
             </div>`;
-        return; // Para a execução aqui
+        return; 
     }
 
     // Caso tenha produtos
@@ -112,9 +112,6 @@ async function getProducts(id, mesa) {
         `;
         listaItens.appendChild(div);
     }
-
-    // FOOTER (Fora do loop)
-    // Aqui usamos o 'id' e 'mesa' que vieram dos PARÂMETROS da função getProducts
     const footer = document.createElement("div");
     footer.className = "pedido-footer";
     footer.innerHTML = `
@@ -140,7 +137,6 @@ async function deletarItem(productid,mesaid) {
     try{
         const req  = await fetch('/deletarProduto/' + productid + '/' + mesaid)
         const res = await req.json()
-        console.log(res)
         verifyMesa()
     }
     catch(err){
@@ -206,16 +202,16 @@ async function addProdutoMesa(product_id,mesa_id) {
         await fetch('/addproduct/' + mesa_id + '/' + product_id)
         showToast()
         closeAlert()
-        getProducts(mesa_id,mesa)
+        verifyMesa()
     }
     catch(err){
         console.log("Erro ao adicionar produto " + err)
     }
 }
-async function pegarProduto(id){
+async function pegaridMesa(){
     const mesa_res = await fetch ("mesa/" + mesa)
     const mesa_result = await mesa_res.json()
-    addProdutoMesa(id,mesa_result[0].id)
+    confirmarPedido(mesa_result[0].id)
 
 }
 
@@ -239,12 +235,13 @@ function renderProducts(lista) {
                 <div class="preco">
                     R$ ${precoFormatado}
                 </div>
-                <button class="add" onclick="pegarProduto(${produto.id})">
+                <button class="add" onclick="openProdModal('${produto.img}',${produto.id},'${produto.nome}',${produto.preco})">
                     Adicionar
                 </button>
             </div>
         `;
     });
+    // adicionarAoCarrinho(${produto.id},'${produto.nome}',${produto.preco})
 
     divProducts.innerHTML = htmlGerado;
 }
@@ -270,6 +267,155 @@ function renderPedidos(lista){
     })
 }
 
+let carrinhoTemporario = [];
+let listaExtras = [];
+
+/*Multiplo envio de produtos */
+
+async function confirmarPedido(mesa_id) {
+    if (carrinhoTemporario.length === 0) return alert("Adicione itens primeiro!");
+
+    const res = await fetch("/add-multi-products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            mesa_id: mesa_id,
+            itens: carrinhoTemporario
+        })
+    });
+
+    if (res.ok) {
+        alert("Pedido enviado!");
+        carrinhoTemporario = []; // Limpa o carrinho após o sucesso
+        verifyMesa(); // Atualiza a tela da mesa
+        closeAlert()
+    }
+}
+
+function adicionarAoCarrinho(produtoId, nome, preco) {
+    const extrasordenados = [...listaExtras].sort()
+    const extrasString = extrasordenados.join(", ");
+    // Verifica se o item já está no carrinho
+    const itemExistente = carrinhoTemporario.find(item => item.id === produtoId && item.extras === extrasString);
+
+    if (itemExistente) {
+        itemExistente.quantidade += 1;
+    } else {
+        carrinhoTemporario.push({ id: produtoId, nome: nome, preco: preco, quantidade: 1, extras: extrasString});
+    }
+    showToast()
+    renderizarCarrinhoTemporario(); // Uma função para mostrar os itens na tela antes de salvar
+}
+function renderizarCarrinhoTemporario() {
+    const listaLateral = document.getElementById("carrinhoTemporarioList");
+    const totalTexto = document.getElementById("totalCarrinhoTemp");
+    
+    // Limpa a lista antes de redesenhar
+    listaLateral.innerHTML = "";
+    
+    if (carrinhoTemporario.length === 0) {
+        listaLateral.innerHTML = '<p class="empty-cart-msg">Nenhum item selecionado</p>';
+        totalTexto.innerText = "R$ 0,00";
+        return;
+    }
+
+    let somaTotal = 0;
+
+    carrinhoTemporario.forEach((item, index) => {
+        const subtotal = item.preco * item.quantidade;
+        console.log("Produto com os extras " + item.extras)
+        somaTotal += subtotal;
+
+        const divItem = document.createElement("div");
+        divItem.className = "temp-item";
+        divItem.innerHTML = `
+            <div class="temp-item-content">
+                <div class="temp-item-header">
+                    <div class="temp-item-info">
+                        <span class="temp-item-name">${item.nome}</span>
+                        <span class="temp-item-qty">${item.quantidade}x R$ ${item.preco.toFixed(2)}</span>
+                    </div>
+                    <div class="temp-item-actions">
+                        <span class="temp-item-price">R$ ${subtotal.toFixed(2)}</span>
+                        <button class="btn-del-temp" onclick="removerDoCarrinhoTemp(${index},${item.quantidade})">✕</button>
+                    </div>
+                </div>
+                
+                <div class="prod_desc">
+                    <i class="icon-obs">✎</i>
+                    <span class="temp-item-qty">${item.extras}</span>
+                </div>
+            </div>
+        `;
+        listaLateral.appendChild(divItem);
+    });
+
+
+    totalTexto.innerText = `R$ ${somaTotal.toFixed(2)}`;
+}
+function removerDoCarrinhoTemp(index,qty){
+    carrinhoTemporario.splice(index,qty)
+    renderizarCarrinhoTemporario()
+}
+
+/*Salvar obs no carrinho */
+
+/**Open Modal de produto */
+
+function openProdModal(img,id,nome,preco){
+    let novoPreco = 0;
+    let valorExtras = 0;
+
+
+    document.getElementById("productModal").style.display="flex"
+
+    document.getElementById("modalImg").src = "/uploads/" + img
+    document.getElementById("modalNome").innerText = nome
+    document.getElementById("modalDescricao").innerText = 'descricao'
+    document.getElementById("modalPreco").innerText = preco
+
+    const button = document.getElementById("addprod")
+
+    try{
+
+        document.querySelectorAll('.extra-item input').forEach(checkbox => {
+            checkbox.addEventListener('change', (event) => {
+                const nomeExtra = event.target.getAttribute('data-name');
+                if (event.target.checked) {
+                    listaExtras.push(nomeExtra)
+                    valorExtras += parseFloat(event.target.getAttribute('value'));
+                    novoPreco = parseFloat(preco) + valorExtras;
+                    document.getElementById("modalPreco").innerText = novoPreco
+                    
+                } else {
+                    const index = listaExtras.indexOf(nomeExtra);
+                    if (index > -1) {
+                        listaExtras.splice(index, 1); // Remove 1 item na posição encontrada
+                    }
+                    console.log("Essa e a lista extra atualizando " + listaExtras)
+                    valorExtras -= parseFloat(event.target.getAttribute('value'));
+                    novoPreco = parseFloat(preco) + valorExtras;
+                    document.getElementById("modalPreco").innerText = novoPreco
+                }
+            });
+        });
+
+    }
+    catch(err){
+        console.log(err.message)
+    }
+
+    button.addEventListener('click', function (){
+        adicionarAoCarrinho(id,nome,novoPreco)
+    })
+
+
+}
+
+function closeProdModal(){
+    document.getElementById("productModal").style.display="none"
+}
+
 
 
 
@@ -279,7 +425,6 @@ function renderPedidos(lista){
 let valorTotalAtual = 0;
 
 function openCheckout(product_id,mesa_id) {
-    imprimirPedido(product_id,mesa_id)
     const totalTexto = document.querySelector(".total").innerText;
     valorTotalAtual = parseFloat(totalTexto.replace("Total: R$ ", "").replace(",", "."));
 
@@ -330,7 +475,6 @@ async function prepararImpressao(mesa_id) {
     // 1. Busca os dados da mesa (o que você já fez)
     const req = await fetch(`/impressao/${mesa_id}`);
     const dadosMesa = await req.json();
-    console.log(mesa_id)
 
     if (!dadosMesa || dadosMesa.length === 0) {
         return alert("Mesa vazia!");

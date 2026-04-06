@@ -77,23 +77,40 @@ Total: R$37
 
 </div>
 <div id="productAlert" class="alert-overlay">
+    <div class="product-box selection-box">
+        <button class="close-modal" onclick="closeAlert()">✖</button>
 
-  <div class="product-box">
+        <div class="modal-layout">
+            <div class="selection-main">
+                <div class="categories">
+                    <div onclick="showCategory('lanches')" id="lanches">Lanches</div>
+                    <div onclick="showCategory('porcoes')" id="porcoes">Porções</div>
+                    <div onclick="showCategory('bebidas')" id="bebidas">Bebidas</div>
+                    <div onclick="showCategory('sobremesas')" id="sobremesas">Sobremesas</div>
+                    <div onclick="showCategory('derivados')" id="derivados">Derivados</div>
+                </div>
 
-    <button class="close-modal" onclick="closeAlert()">✖</button>
+                <div id="productsList" class="products">
+                    </div>
+            </div>
 
-    <div class="categories">
-      <div onclick="showCategory('lanches')" id="lanches">Lanches</div>
-      <div onclick="showCategory('porcoes')"id="porcoes">Porções</div>
-      <div onclick="showCategory('bebidas')" id="bebidas">Bebidas</div>
-      <div onclick="showCategory('sobremesas')" id="sobremesas">Sobremesas</div>
-      <div onclick="showCategory('derivados')"id="derivados">Derivados</div>
+            <div class="selection-cart">
+                <h3>Novo Pedido</h3>
+                <div id="carrinhoTemporarioList" class="cart-items-preview">
+                    <p class="empty-cart-msg">Nenhum item selecionado</p>
+                </div>
+                
+                <div class="cart-footer">
+                    <div class="cart-total-preview">
+                        Total: <span id="totalCarrinhoTemp">R$ 0,00</span>
+                    </div>
+                    <button class="btn-confirm-order" onclick="pegaridMesa()">
+                        🚀 Enviar para Cozinha
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div id="productsList" class="products"></div>
-
-  </div>
-
 </div>
 
 </div>
@@ -156,6 +173,59 @@ Total: R$37
             <button class="btn btn-pagar" onclick="processarPagamento()">Confirmar Pagamento</button>
         </div>
     </div>
+</div>
+
+<div id="productModal" class="modal">
+
+  <div class="modal-content">
+
+    <span class="close" onclick="closeProdModal()">✕</span>
+
+    <img id="modalImg" class="modal-img">
+
+    <div class="modal-body">
+
+      <h2 id="modalNome"></h2>
+
+      <p id="modalDescricao"></p>
+
+      <div class="modal-preco">
+        R$ <span id="modalPreco"></span>
+      </div>
+
+      <div class="extras">
+        <h3>Extras</h3>
+
+        <label class="extra-item">
+          <input type="checkbox" value="3" data-name="Ovo">
+          Ovo + R$3
+        </label>
+
+        <label class="extra-item">
+          <input type="checkbox" value="4" data-name="Bacon">
+          Bacon + R$4
+        </label>
+
+        <label class="extra-item">
+          <input type="checkbox" value="2" data-name="Cheddar">
+          Cheddar + R$2
+        </label>
+
+      </div>
+
+      <div class="obs-container">
+        <label>Observação</label>
+        <textarea id="modalObs" placeholder="Ex: sem tomate"></textarea>
+      </div>
+
+      <button class="add-btn" id="addprod">
+        Adicionar ao pedido
+      </button>
+
+    </div>
+
+  </div>
+
 </div>
 
 </body>

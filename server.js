@@ -39,6 +39,7 @@ db.serialize(() => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       img TEXT,
       nome TEXT,
+      modificadores TEXT,
       categoria TEXT,
       preco REAL
     )
@@ -49,11 +50,15 @@ db.serialize(() => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       mesa_id INTEGER,
       produto_id INTEGER,
-      quantidade INTEGER,
+      quantidade INTEGER NOT NULL CHECK (quantidade >= 0),
+      desc TEXT,
       status TEXT,
       hora TEXT
     )
   `)
+  db.run(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_pedido_unico 
+    ON pedidos (mesa_id, produto_id, status);`)
 
 })
 
@@ -89,9 +94,103 @@ app.get ("/mesa/:id",(req,res)=>{
         }
     })
 })
+
+
+
+/*Imprimi Produto0 */
+async function dispararImpressao(mesa_id, itens) {
+  console.log("Rodando impressão ! " , itens)
+    // let printer = new ThermalPrinter({
+    //     type: Types.EPSON,
+    //     interface: '\\\\localhost\\BEMATECH',
+    //     characterSet: 'PC860_PORTUGUESE',
+    //     width: 42
+    // });
+
+    let printer = new ThermalPrinter({
+        type: Types.EPSON, // Ou BEMATECH
+        interface: './simulacao_cupom.txt', // Cria um arquivo na raiz do projeto
+        width: 42, // Largura padrão da Bematech de 80mm
+        characterSet: 'PC860_PORTUGUESE'
+    });
+
+
+
+    try {
+        printer.alignCenter();
+        printer.bold(true);
+        printer.println("NOVO PEDIDO - COZINHA");
+        printer.println(`MESA: ${mesa_id}`);
+        printer.bold(false);
+        printer.println("--------------------------------");
+
+        itens.forEach(item => {
+          const nomeSeguro = (item.nome && typeof item.nome === 'string') ? item.nome : "PRODUTO";
+          
+          const nomeBase = nomeSeguro.substring(0, 30).toUpperCase().padEnd(32);
+          const qtdBase = `x${item.quantidade || 1}`.padStart(6);
+          
+          printer.println(nomeBase + qtdBase);
+
+          if (item.desc && typeof item.desc === 'string') {
+              const obs = item.desc.trim().toUpperCase();
+              if (obs !== "") {
+                  printer.println(`  >> OBS: ${obs}`);
+              }
+          }
+
+          printer.println("-".repeat(42)); 
+      });
+
+        printer.println("--------------------------------");
+        printer.println(`HORA: ${new Date().toLocaleTimeString('pt-BR')}`);
+        printer.newLine();
+        printer.newLine();
+        printer.newLine();
+        printer.newLine();
+        printer.cut();
+
+        await printer.execute();
+        console.log("Pedido enviado para a cozinha!");
+    } catch (error) {
+        console.error("Erro na impressora física:", error);
+    }
+}
 /* Imprimir dados */
 
+app.post("/add-multi-products", (req, res) => {
+    const { mesa_id, itens } = req.body;
+    console.log("Body: " , req.body)
 
+    if (!itens || itens.length === 0) {
+        return res.status(400).json({ error: "Carrinho vazio" });
+    }
+
+    db.serialize(() => {
+        itens.forEach((item) => {
+            const sqlBusca = "SELECT id, quantidade FROM pedidos WHERE mesa_id = ? AND produto_id = ? AND status = 'aberto'";
+            
+            db.get(sqlBusca, [mesa_id, item.id], (err, row) => {
+                if (err) {
+                    console.error("Erro na busca:", err);
+                    return;
+                }
+
+                if (row) {
+                    const novaQtd = row.quantidade + item.quantidade;
+                    db.run("UPDATE pedidos SET quantidade = ? WHERE id = ?", [novaQtd, row.id]);
+                } else {
+                    const sqlInsert = "INSERT INTO pedidos (mesa_id, produto_id, quantidade,status, hora) VALUES (?, ?, ?, ? , ?)";
+                    console.log("item id = " + item.id + "item.quantidade = " + item.quantidade)
+                    db.run(sqlInsert, [mesa_id, item.id, item.quantidade,'aberto', new Date().toISOString()]);
+                }
+            });
+        });
+    });
+    dispararImpressao(mesa_id,itens)
+
+    res.json({ success: true, message: "Pedido processado com sucesso!" });
+});
 /* Pega os produtos existentes na mesa */
 
 app.get ("/mesa/:id/products/:mesa_id", (req,res) =>{
@@ -160,12 +259,18 @@ app.post("/imprimir-comando", async (req, res) => {
     const { mesa_id, itens } = req.body;
 
     // Inicialização segura
+    // let printer = new ThermalPrinter({
+    //     type: Types.EPSON, // A Bematech MP-4200 aceita comandos EPSON (ESC/POS) perfeitamente
+    //     interface: '\\\\localhost\\BEMATECH', // Verifique se o nome no compartilhamento é EXATAMENTE esse
+    //     characterSet: 'PC860_PORTUGUESE', // Conjunto de caracteres para PT-BR
+    //     removeSpecialCharacters: false,
+    //     width: 42
+    // });
     let printer = new ThermalPrinter({
-        type: Types.EPSON, // A Bematech MP-4200 aceita comandos EPSON (ESC/POS) perfeitamente
-        interface: '\\\\localhost\\BEMATECH', // Verifique se o nome no compartilhamento é EXATAMENTE esse
-        characterSet: 'PC860_PORTUGUESE', // Conjunto de caracteres para PT-BR
-        removeSpecialCharacters: false,
-        width: 42
+      type: Types.EPSON, // Ou BEMATECH
+      interface: 'printer:default', // Nome exato da impressora no Windows
+      characterSet: 'PC860_PORTUGUESE',
+      width: 42 // Isso é fundamental para ver se o texto quebra
     });
 
     // Teste rápido para validar se o tipo foi reconhecido
@@ -300,12 +405,6 @@ app.get("/products/:category", async (req,res) =>{
     })
 })
 
-/*Imprimi Produto0 */
-app.get("/imprimit-produto/:produto_id", async (req,res) =>{
-  const product_id = req.params;
-
-  
-})
 
 /*Adicionar pdoruto a Mesa */
 app.get("/addproduct/:mesaid/:productid", async (req,res) =>{
@@ -322,6 +421,9 @@ app.get("/addproduct/:mesaid/:productid", async (req,res) =>{
             // INSERT - Não existia
             db.run("INSERT INTO pedidos (mesa_id, produto_id, quantidade, status, hora) VALUES (?,?,?,?,?)", 
             [mesa_id, id, 1, 'aberto', new Date().toISOString()], () => {
+                db.get("SELECT * FROM produtos WHERE id = ? ",[id],(err,result) =>{
+                  dispararImpressao(mesa_id, [{ nome: result.nome, quantidade: 1 }]);
+                })
                 res.status(200).json({ message: "Inserido!" });
             });
             
@@ -329,6 +431,9 @@ app.get("/addproduct/:mesaid/:productid", async (req,res) =>{
             // UPDATE - Já existia
             db.run("UPDATE pedidos SET quantidade = quantidade + 1 WHERE mesa_id = ? AND produto_id = ? AND status = 'aberto'", 
             [mesa_id, id], () => {
+                db.get("SELECT * FROM produtos WHERE id = ? ",[id],(err,result) =>{
+                  dispararImpressao(mesa_id, [{ nome: result.nome, quantidade: 1 }]);
+                })
                 res.status(200).json({ message: "Atualizado!" });
             });
         }
@@ -373,18 +478,23 @@ app.get('/menosUm/:productid/:mesaid',  async (req,res) =>{
   const mesa_id = req.params.mesaid
 
   try{
-    db.run(
-    "UPDATE pedidos SET quantidade = quantidade - 1 WHERE mesa_id = ? AND produto_id = ? AND status = 'aberto' ",
-    [mesa_id, product_id],
-    function(err) {
-      if (err) {
-        console.error(err.message);
-        return;
+    db.get("SELECT quantidade FROM pedidos WHERE mesa_id = ? AND produto_id = ?",[mesa_id,product_id] ,(err,row) => {
+      if(row && row.quantidade > 1){
+        const novaquantidade = row.quantidade - 1;
+          db.run(
+          "UPDATE pedidos SET quantidade = quantidade - 1 WHERE mesa_id = ? AND produto_id = ? AND status = 'aberto' ",
+          [mesa_id, product_id],
+          function(err) {
+            if (err) {
+              console.error(err.message);
+              return;
+            }
+            console.log(`Linhas alteradas: ${this.changes}`); 
+            console.log(`Último ID inserido: ${this.lastID}`);
+          }
+          )
       }
-      console.log(`Linhas alteradas: ${this.changes}`); 
-      console.log(`Último ID inserido: ${this.lastID}`);
-    }
-    );
+    })
     res.status(200).json({message: "Produto alterado a quantidade com sucesso ! "})
   }
   catch(err){
