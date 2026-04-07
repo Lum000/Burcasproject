@@ -37,9 +37,10 @@ db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS produtos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      img TEXT,
+      img TEXT NOT NULL,
       nome TEXT,
-      modificadores TEXT,
+      extras TEXT,
+      descricao TEXT NOT NULL,
       categoria TEXT,
       preco REAL
     )
@@ -363,20 +364,18 @@ app.listen(3000, () => {
 
 
 /* Adicionar Produto ao Banco de Dados */
-app.post("/addProduct", upload.single("imagem"), (req,res)=>{
+app.post("/addProduct", upload.single('imagem'), (req, res) => {
+    const { nome, preco,descricao, categoria, extras } = req.body;
+    const imagemPath = req.file ? req.file.filename : null;
 
-const {nome, preco, categoria} = req.body
-const imagem = req.file.filename
+    const listaExtras = JSON.parse(extras); 
 
-
-db.run(
-"INSERT INTO produtos (nome,preco,categoria,img) VALUES (?,?,?,?)",
-[nome,preco,categoria,imagem]
-)
-
-res.send("ok")
-
-})
+    const sql = "INSERT INTO produtos (nome, preco,descricao, categoria, img, extras) VALUES (?, ?, ? , ?, ?, ?)";
+    db.run(sql, [nome, preco,descricao, categoria, imagemPath, extras], (err) => {
+        if (err) return res.status(500).send(err.message);
+        res.send("Sucesso!");
+    });
+});
 
 
 /* Pega tudo do produto clickado */

@@ -223,10 +223,13 @@ function renderProducts(lista) {
     let htmlGerado = "";
 
     lista.forEach(produto => {
+        // Garantimos que extras e descrição nunca sejam null
+        const extrasStr = produto.extras || "[]"; 
+        const descricaoStr = produto.descricao || "";
         const precoFormatado = Number(produto.preco).toFixed(2).replace('.', ',');
 
         htmlGerado += `
-            <div class="product-item" data-id="${produto.id}">
+            <div class="product-item">
                 <img src="/uploads/${produto.img}" alt="${produto.nome}">
 
                 <div class="product-name">
@@ -235,7 +238,15 @@ function renderProducts(lista) {
                 <div class="preco">
                     R$ ${precoFormatado}
                 </div>
-                <button class="add" onclick="openProdModal('${produto.img}',${produto.id},'${produto.nome}',${produto.preco})">
+                
+                <button class="add" 
+                    data-id="${produto.id}"
+                    data-nome="${produto.nome}"
+                    data-preco="${produto.preco}"
+                    data-img="${produto.img}"
+                    data-desc="${descricaoStr}"
+                    data-extras='${extrasStr}'
+                    onclick="openProdModal(this)">
                     Adicionar
                 </button>
             </div>
@@ -292,23 +303,39 @@ async function confirmarPedido(mesa_id) {
     }
 }
 
-function adicionarAoCarrinho(produtoId, nome, preco) {
-    const extrasordenados = [...listaExtras].sort()
-    const extrasString = extrasordenados.join(", ");
-    // Verifica se o item já está no carrinho
-    const itemExistente = carrinhoTemporario.find(item => item.id === produtoId && item.extras === extrasString);
+function adicionarAoCarrinho(produtoId, nome, preco, obs, extrasSelecionados) {
+    // Criamos a string de extras para exibição e comparação
+    const extrasString = extrasSelecionados.length > 0 ? extrasSelecionados.sort().join(", ") : "Sem adicionais";
+    
+    // Chave única: ID + Extras + Obs
+    const itemKey = `${produtoId}-${extrasString}-${obs}`;
 
-    if (itemExistente) {
-        itemExistente.quantidade += 1;
+    const indexExistente = carrinhoTemporario.findIndex(item => {
+        return `${item.id}-${item.extras}-${item.obs}` === itemKey;
+    });
+
+    if (indexExistente !== -1) {
+        // Se for exatamente igual, aumenta a quantidade
+        carrinhoTemporario[indexExistente].quantidade += 1;
     } else {
-        carrinhoTemporario.push({ id: produtoId, nome: nome, preco: preco, quantidade: 1, extras: extrasString});
+        // Se for diferente (outro extra ou outra obs), cria nova linha
+        carrinhoTemporario.push({ 
+            id: produtoId, 
+            nome: nome, 
+            preco: preco, 
+            quantidade: 1, 
+            extras: extrasString, 
+            obs: obs 
+        });
     }
-    showToast()
-    renderizarCarrinhoTemporario(); // Uma função para mostrar os itens na tela antes de salvar
+
+    showToast();
+    renderizarCarrinhoTemporario();
 }
 function renderizarCarrinhoTemporario() {
     const listaLateral = document.getElementById("carrinhoTemporarioList");
     const totalTexto = document.getElementById("totalCarrinhoTemp");
+    
     
     // Limpa a lista antes de redesenhar
     listaLateral.innerHTML = "";
@@ -322,6 +349,8 @@ function renderizarCarrinhoTemporario() {
     let somaTotal = 0;
 
     carrinhoTemporario.forEach((item, index) => {
+        const displayExtras = item.extras;
+        const displayObs = item.obs ? ` / Obs: ${item.obs}` : "";
         const subtotal = item.preco * item.quantidade;
         console.log("Produto com os extras " + item.extras)
         somaTotal += subtotal;
@@ -343,7 +372,7 @@ function renderizarCarrinhoTemporario() {
                 
                 <div class="prod_desc">
                     <i class="icon-obs">✎</i>
-                    <span class="temp-item-qty">${item.extras}</span>
+                    <span class="temp-item-details">${displayExtras}${displayObs}</span>
                 </div>
             </div>
         `;
@@ -359,57 +388,86 @@ function removerDoCarrinhoTemp(index,qty){
 }
 
 /*Salvar obs no carrinho */
+function desmarcarTudo() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+}
 
 /**Open Modal de produto */
 
-function openProdModal(img,id,nome,preco){
-    let novoPreco = 0;
-    let valorExtras = 0;
+function openProdModal(botao) {
+    const id = botao.dataset.id;
+    const nome = botao.dataset.nome;
+    const precoBase = parseFloat(botao.dataset.preco); // Preço original do produto
+    const img = botao.dataset.img;
+    const descricao = botao.dataset.desc;
+    
+    let extras = [];
+    try {
+        extras = JSON.parse(botao.dataset.extras);
+    } catch (e) {
+        extras = [];
+    }
 
+    // RESET DE ESTADO DO MODAL
+    listaExtras = []; // Limpa a lista global de nomes de extras
+    let valorExtrasAcumulado = 0;
+    document.getElementById("modalObs").value = ""; // Limpa observação anterior
 
-    document.getElementById("productModal").style.display="flex"
+    // Interface
+    document.getElementById("productModal").style.display = "flex";
+    document.getElementById("modalImg").src = "/uploads/" + img;
+    document.getElementById("modalNome").innerText = nome;
+    document.getElementById("modalDescricao").innerText = descricao;
+    document.getElementById("modalPreco").innerText = precoBase.toFixed(2);
 
-    document.getElementById("modalImg").src = "/uploads/" + img
-    document.getElementById("modalNome").innerText = nome
-    document.getElementById("modalDescricao").innerText = 'descricao'
-    document.getElementById("modalPreco").innerText = preco
+    const extradiv = document.querySelector(".extras");
+    extradiv.innerHTML = ""; 
 
-    const button = document.getElementById("addprod")
+    // Renderiza Extras
+    extras.forEach(item => {
+        const label = document.createElement("label");
+        label.className = "extra-item";
+        label.innerHTML = `
+            <input type="checkbox" value="${item.preco}" data-name="${item.nome}">
+            ${item.nome} + R$ ${parseFloat(item.preco).toFixed(2)}
+        `;
+        
+        // Evento de mudança no checkbox
+        const input = label.querySelector('input');
+        input.addEventListener('change', (e) => {
+            const precoExtra = parseFloat(e.target.value);
+            const nomeExtra = e.target.getAttribute('data-name');
 
-    try{
+            if (e.target.checked) {
+                listaExtras.push(nomeExtra);
+                valorExtrasAcumulado += precoExtra;
+            } else {
+                listaExtras = listaExtras.filter(n => n !== nomeExtra);
+                valorExtrasAcumulado -= precoExtra;
+            }
 
-        document.querySelectorAll('.extra-item input').forEach(checkbox => {
-            checkbox.addEventListener('change', (event) => {
-                const nomeExtra = event.target.getAttribute('data-name');
-                if (event.target.checked) {
-                    listaExtras.push(nomeExtra)
-                    valorExtras += parseFloat(event.target.getAttribute('value'));
-                    novoPreco = parseFloat(preco) + valorExtras;
-                    document.getElementById("modalPreco").innerText = novoPreco
-                    
-                } else {
-                    const index = listaExtras.indexOf(nomeExtra);
-                    if (index > -1) {
-                        listaExtras.splice(index, 1); // Remove 1 item na posição encontrada
-                    }
-                    console.log("Essa e a lista extra atualizando " + listaExtras)
-                    valorExtras -= parseFloat(event.target.getAttribute('value'));
-                    novoPreco = parseFloat(preco) + valorExtras;
-                    document.getElementById("modalPreco").innerText = novoPreco
-                }
-            });
+            // Atualiza o preço exibido no modal em tempo real
+            const totalModal = precoBase + valorExtrasAcumulado;
+            document.getElementById("modalPreco").innerText = totalModal.toFixed(2);
         });
 
-    }
-    catch(err){
-        console.log(err.message)
-    }
+        extradiv.appendChild(label);
+    });
 
-    button.addEventListener('click', function (){
-        adicionarAoCarrinho(id,nome,novoPreco)
-    })
-
-
+    // CONFIGURAÇÃO DO BOTÃO SALVAR (IMPORTANTE: .onclick substitui o evento anterior)
+    const button = document.getElementById("addprod");
+    button.onclick = function() {
+        const obs = document.getElementById('modalObs').value.trim();
+        const precoFinalComExtras = precoBase + valorExtrasAcumulado;
+        
+        // Passamos a lista de extras atual
+        adicionarAoCarrinho(id, nome, precoFinalComExtras, obs, [...listaExtras]);
+        
+        closeProdModal();
+    };
 }
 
 function closeProdModal(){

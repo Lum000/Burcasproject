@@ -1,137 +1,250 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
-<meta charset="UTF-8">
-<title>Cadastrar Produto</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Produto - BurcasProject</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #121212;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
 
-<style>
+        .box {
+            background: #1e1e1e;
+            padding: 25px;
+            border-radius: 10px;
+            width: 380px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
 
-body{
-    font-family:Arial;
-    background:#121212;
-    color:white;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
-}
+        h2 { text-align: center; margin-bottom: 20px; color: #28a745; }
 
-.box{
-    background:#1e1e1e;
-    padding:25px;
-    border-radius:10px;
-    width:320px;
-}
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            background: #2a2a2a;
+            color: white;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
 
-input,select{
-    width:100%;
-    padding:8px;
-    margin-top:10px;
-    border:none;
-    border-radius:5px;
-}
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
 
-button{
-    width:100%;
-    padding:10px;
-    margin-top:15px;
-    background:#28a745;
-    border:none;
-    color:white;
-    font-weight:bold;
-    border-radius:5px;
-    cursor:pointer;
-}
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-size: 14px;
+        }
 
-button:hover{
-    background:#1f8c39;
-}
+        #extra-checkbox { width: auto; margin: 0; }
 
-.preview{
-    margin-top:10px;
-    width:100%;
-    height:120px;
-    background:#333;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:5px;
-    overflow:hidden;
-}
+        /* Container de Extras Dinâmicos */
+        #container-lista-extras {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+            background: #252525;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px dashed #444;
+        }
 
-.preview img{
-    width:100%;
-    object-fit:cover;
-}
+        .linha-extra {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 5px;
+        }
 
-</style>
+        .linha-extra input { margin-top: 0; font-size: 13px; }
 
+        .btn-remove {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 0 10px;
+            cursor: pointer;
+        }
+
+        .btn-add-extra {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: 0.3s;
+        }
+
+        button#btn-salvar {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            background: #28a745;
+            border: none;
+            color: white;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button#btn-salvar:hover { background: #1f8c39; }
+
+        .preview {
+            margin-top: 15px;
+            width: 100%;
+            height: 150px;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            overflow: hidden;
+            border: 1px solid #444;
+        }
+
+        .preview img { width: 100%; height: 100%; object-fit: cover; }
+    </style>
 </head>
-
 <body>
 
 <div class="box">
+    <h2>Adicionar Produto</h2>
 
-<h2>Adicionar Produto</h2>
+    <input id="nome" placeholder="Nome do produto (ex: X-Salada)">
+    
+    <textarea id="descricao" placeholder="Descrição do que vem no prato..."></textarea>
+    
+    <input id="preco" type="number" step="0.01" placeholder="Preço Base (R$)">
 
-<input id="nome" placeholder="Nome do produto">
+    <label class="checkbox-container">
+        <input id="extra-checkbox" type="checkbox">
+        <span>Possui Adicionais/Extras?</span>
+    </label>
 
-<input id="preco" type="number" placeholder="Preço">
+    <div id="container-lista-extras">
+        <div id="lista-inputs-extras"></div>
+        <button type="button" class="btn-add-extra" onclick="adicionarNovoCampoExtra()">+ Adicionar Novo Extra</button>
+    </div>
 
-<select id="categoria">
-<option value="lanches">Lanches</option>
-<option value="porcoes">Porções</option>
-<option value="bebidas">Bebidas</option>
-<option value="sobremesas">Sobremesas</option>
-<option value="derivados">Derivados</option>
-</select>
+    <select id="categoria">
+        <option value="lanches">Lanches</option>
+        <option value="porcoes">Porções</option>
+        <option value="bebidas">Bebidas</option>
+        <option value="sobremesas">Sobremesas</option>
+    </select>
 
-<input type="file" id="imagem" accept="image/*" onchange="previewImg()">
+    <input type="file" id="imagem" accept="image/*" onchange="previewImg()">
 
-<div class="preview">
-<img id="previewImg">
-</div>
+    <div class="preview">
+        <img id="previewImg" src="" alt="Sua imagem aparecerá aqui" style="display: none;">
+        <span id="placeholder-text">Sem imagem</span>
+    </div>
 
-<button onclick="addProduct()">Salvar Produto</button>
-
+    <button id="btn-salvar" onclick="addProduct()">Salvar Produto</button>
 </div>
 
 <script>
+    const checkboxExtras = document.getElementById("extra-checkbox");
+    const containerExtras = document.getElementById("container-lista-extras");
+    const listaInputs = document.getElementById("lista-inputs-extras");
 
-function previewImg(){
+    checkboxExtras.addEventListener("change", function() {
+        containerExtras.style.display = this.checked ? "flex" : "none";
+        if (this.checked && listaInputs.children.length === 0) {
+            adicionarNovoCampoExtra();
+        }
+    });
 
-const file = document.getElementById("imagem").files[0]
+    function adicionarNovoCampoExtra() {
+        const divLinha = document.createElement("div");
+        divLinha.className = "linha-extra";
+        divLinha.innerHTML = `
+            <input type="text" class="extra-nome" placeholder="Nome (Ex: Ovo)" style="flex: 2;">
+            <input type="number" class="extra-preco" step="0.01" placeholder="R$" style="flex: 1;">
+            <button type="button" class="btn-remove" onclick="this.parentElement.remove()">✕</button>
+        `;
+        listaInputs.appendChild(divLinha);
+    }
 
-if(file){
-document.getElementById("previewImg").src = URL.createObjectURL(file)
-}
+    function previewImg() {
+        const file = document.getElementById("imagem").files[0];
+        const img = document.getElementById("previewImg");
+        const text = document.getElementById("placeholder-text");
+        if (file) {
+            img.src = URL.createObjectURL(file);
+            img.style.display = "block";
+            text.style.display = "none";
+        }
+    }
 
-}
+    async function addProduct() {
+        const nome = document.getElementById("nome").value;
+        const descricao = document.getElementById("descricao").value; // Captura a descrição
+        const preco = document.getElementById("preco").value;
+        const categoria = document.getElementById("categoria").value;
+        const imagem = document.getElementById("imagem").files[0];
 
-async function addProduct(){
+        if (!nome || !preco) {
+            alert("Por favor, preencha o nome e o preço base.");
+            return;
+        }
 
-const nome = document.getElementById("nome").value
-const preco = document.getElementById("preco").value
-const categoria = document.getElementById("categoria").value
-const imagem = document.getElementById("imagem").files[0]
+        const extras = [];
+        if (checkboxExtras.checked) {
+            const nomes = document.querySelectorAll(".extra-nome");
+            const precos = document.querySelectorAll(".extra-preco");
+            nomes.forEach((input, i) => {
+                const n = input.value.trim();
+                const p = parseFloat(precos[i].value);
+                if (n && !isNaN(p)) extras.push({ nome: n, preco: p });
+            });
+        }
 
-const formData = new FormData()
+        const formData = new FormData();
+        formData.append("nome", nome);
+        formData.append("descricao", descricao); // Envia a descrição
+        formData.append("preco", preco);
+        formData.append("categoria", categoria);
+        formData.append("imagem", imagem);
+        formData.append("extras", JSON.stringify(extras));
 
-formData.append("nome",nome)
-formData.append("preco",preco)
-formData.append("categoria",categoria)
-formData.append("imagem",imagem)
+        try {
+            const response = await fetch("/addProduct", {
+                method: "POST",
+                body: formData
+            });
 
-await fetch("/addProduct",{
-method:"POST",
-body:formData
-})
-
-alert("Produto cadastrado!")
-
-}
-
+            if (response.ok) {
+                alert("Produto cadastrado com sucesso!");
+                location.reload();
+            } else {
+                alert("Erro ao cadastrar.");
+            }
+        } catch (error) {
+            console.error("Erro:", error);
+        }
+    }
 </script>
 
 </body>
