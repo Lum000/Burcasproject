@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | BurcasProject</title>
+    <link rel="stylesheet" href="css/login.css">
+    <script src="js/login.js" defer></script>
+</head>
+<body>
+    <div class="bg-animation">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="login-container">
+        <div class="login-box" id="auth-box">
+            <h2 id="auth-title">Bem-vindo</h2>
+            <p id="auth-subtitle">Acesse o sistema de gestão</p>
+            
+            <div class="input-area">
+                <div class="input-group">
+                    <input type="text" required id="user" autocomplete="off">
+                    <label>Usuário</label>
+                </div>
+
+                <div class="input-group email-group"style="display: none; opacity: 0; max-height: 0; margin-bottom: 0;">
+                    <input placeholder="E-Mail" type="email" id="email" autocomplete="off">
+                    <label>E-mail</label>
+                </div>
+                <div class="input-group email-group"style="display: none; opacity: 0; max-height: 0; margin-bottom: 0;">
+                    <input placeholder="idLoja" type="text" id="idLoja" autocomplete="off"  required>
+                </div>
+                <div class="input-group email-group" style="display: none; opacity: 0; max-height: 0; margin-bottom: 0;">
+                    <input placeholder="passwordLoja" type="text" id="passwordLoja" autocomplete="off"  required>
+                </div>
+
+                <div class="input-group">
+                    <input type="password" required id="password">
+                    <label>Senha</label>
+                </div>
+            </div>
+
+            <button class="btn-login" id="auth-btn">
+                Entrar
+            </button>
+            
+            <div class="footer-links">
+                <a href="javascript:void(0)" id="toggle-link" onclick="toggleAuth()">
+                    Não tem conta? Cadastre-se
+                </a>
+                <br>
+                <a href="#" class="forgot-pass">Esqueceu a senha?</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

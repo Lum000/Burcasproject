@@ -19,17 +19,21 @@ db.serialize(() => {
     CREATE TABLE IF NOT EXISTS lojasInfo
     (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nome TEXT UNIQUE,
-      logo TEXT
+      nomeLoja TEXT UNIQUE,
+      logo TEXT,
+      user TEXT NOT NULL,
+      password TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'user'
     )
   `)
-
+  
   /*Tabela das Mesas */
   db.run(`
     CREATE TABLE IF NOT EXISTS mesas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       numero INTEGER UNIQUE,
       status TEXT,
+      lojaId INTEGER NOT NULL,
       qty INTEGER
     )
   `)
@@ -42,6 +46,7 @@ db.serialize(() => {
       extras TEXT,
       descricao TEXT NOT NULL,
       categoria TEXT,
+      lojaId  INTEGER NOT NULL,
       preco REAL
     )
   `)
@@ -53,14 +58,23 @@ db.serialize(() => {
       produto_id INTEGER,
       quantidade INTEGER NOT NULL CHECK (quantidade >= 0),
       desc TEXT,
+      lojaId INTEGER NOT NULL,
       status TEXT,
       hora TEXT
     )
   `)
+  db.run(`CREATE TABLE IF NOT EXISTS usuarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user TEXT NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT DEFAULT user,
+    email TEXT,
+    idLoja TEXT,
+    passLoja TEXT
+  )`)
   db.run(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_pedido_unico 
     ON pedidos (mesa_id, produto_id, status);`)
-
 })
 
 /* Armazenar as logos e imagens */
@@ -82,6 +96,54 @@ app.use(express.json())
 app.use(express.urlencoded({extended:true}))
 
 app.use("/uploads",express.static("uploads"))
+
+
+// Login 
+app.get('/login/:user/:password', (req,res) =>{
+  const {user, password} = req.params
+
+})
+
+//Registro
+
+
+app.post('/register', async (req,res) =>{
+  const bcrypt = require('bcrypt')
+  const saltRounds = 10
+  const {nome,email,senha,idLoja,passLoja} = req.body
+  try{
+    const hashedpassword = await bcrypt.hash(senha,saltRounds)
+    const hashedLojaPassword = await bcrypt.hash(passLoja,saltRounds)
+    const query = "INSERT INTO usuarios (user,password,email,idLoja,passLoja) VALUES (?,?,?,?,?)"
+    db.query(query,[nome,hashedpassword,email,idLoja,hashedLojaPassword], (err,result) =>{
+      if(err){
+        return res.status(400).json({message:"Erro ao registrar usuario" + err.message})
+      }
+      return res.status(200).json({message: "Exito ao criar usuario na loja " + idLoja})
+    })
+  }
+  catch(err){
+    return res.status(400).json({message:"Erro ao registrar usuario " + err.message} )
+  }
+}) 
+
+
+
+
+
+// Verificar informações do usuario
+app.get('/api/user-info', (req, res) => {
+    if (req.session && req.session.userId) {
+        res.json({
+            logado: true,
+            userId: req.session.userId,
+            role: req.session.userRole,
+            nome: req.session.userName 
+        });
+    } else {
+        res.json({ logado: false, role: null });
+    }
+});
 
 /* Recupera o id da mesa selecionada */
 
@@ -404,46 +466,6 @@ app.get("/products/:category", async (req,res) =>{
     })
 })
 
-
-/*Adicionar pdoruto a Mesa */
-app.get("/addproduct/:mesaid/:productid", async (req,res) =>{
-    try{
-      const id = req.params.productid
-      const mesa_id = req.params.mesaid
-      db.get("SELECT * FROM pedidos WHERE mesa_id = ? AND produto_id = ? AND status = 'aberto'", [mesa_id, id], (err, row) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).send("Erro no banco");
-        }
-
-        if (!row) {
-            // INSERT - Não existia
-            db.run("INSERT INTO pedidos (mesa_id, produto_id, quantidade, status, hora) VALUES (?,?,?,?,?)", 
-            [mesa_id, id, 1, 'aberto', new Date().toISOString()], () => {
-                db.get("SELECT * FROM produtos WHERE id = ? ",[id],(err,result) =>{
-                  dispararImpressao(mesa_id, [{ nome: result.nome, quantidade: 1 }]);
-                })
-                res.status(200).json({ message: "Inserido!" });
-            });
-            
-        } else {
-            // UPDATE - Já existia
-            db.run("UPDATE pedidos SET quantidade = quantidade + 1 WHERE mesa_id = ? AND produto_id = ? AND status = 'aberto'", 
-            [mesa_id, id], () => {
-                db.get("SELECT * FROM produtos WHERE id = ? ",[id],(err,result) =>{
-                  dispararImpressao(mesa_id, [{ nome: result.nome, quantidade: 1 }]);
-                })
-                res.status(200).json({ message: "Atualizado!" });
-            });
-        }
-    });
-
-      
-    }
-    catch (err){
-      console.log("ERRO 500 NO SERVIDOR " + err)
-    }
-})
 /*  Atualiza a quantidade do produto especifico daquela mesa */
 
 app.get('/addMore/:productid/:mesaid',  async (req,res) =>{

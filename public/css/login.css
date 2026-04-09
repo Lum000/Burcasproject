@@ -1,0 +1,197 @@
+/* --- Reset e Fontes --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f172a; /* Fundo escuro profundo */
+    overflow: hidden;
+    position: relative;
+}
+
+/* --- Animação de Fundo (Blobs) --- */
+.bg-animation {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    filter: blur(80px);
+}
+
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.6;
+    animation: move 20s infinite alternate ease-in-out;
+}
+
+.blob-1 {
+    width: 400px;
+    height: 400px;
+    background: #6366f1;
+    top: -10%;
+    left: 10%;
+}
+
+.blob-2 {
+    width: 500px;
+    height: 500px;
+    background: #a855f7;
+    bottom: -10%;
+    right: 10%;
+    animation-duration: 25s;
+}
+
+.blob-3 {
+    width: 300px;
+    height: 300px;
+    background: #ec4899;
+    top: 30%;
+    left: 35%;
+    animation-duration: 15s;
+}
+
+@keyframes move {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(120px, 80px) scale(1.1); }
+}
+
+/* --- Container Principal --- */
+.login-container {
+    perspective: 1000px;
+    z-index: 10;
+}
+
+/* --- Caixa de Autenticação (Glassmorphism) --- */
+.login-box {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 50px 40px;
+    border-radius: 24px;
+    width: 400px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+h2 {
+    font-size: 2.2rem;
+    margin-bottom: 8px;
+    letter-spacing: -1px;
+}
+
+p {
+    color: #94a3b8;
+    margin-bottom: 35px;
+    font-size: 0.95rem;
+}
+
+/* --- Área de Inputs --- */
+.input-area {
+    text-align: left;
+}
+
+.input-group {
+    position: relative;
+    margin-bottom: 25px;
+    transition: all 0.3s ease;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px 4px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    outline: none;
+    color: white;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+}
+
+.input-group label {
+    position: absolute;
+    left: 4px;
+    top: 12px;
+    color: #64748b;
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+/* Animação do Label (Sobe quando foca ou tem texto) */
+.input-group input:focus ~ label,
+.input-group input:valid ~ label {
+    top: -14px;
+    font-size: 0.75rem;
+    color: #818cf8;
+    font-weight: 600;
+}
+
+.input-group input:focus {
+    border-bottom-color: #6366f1;
+}
+
+/* Estilo específico para o campo de E-mail animado */
+#email-group {
+    overflow: hidden;
+    transition: opacity 0.4s ease, transform 0.4s ease, margin 0.4s ease;
+}
+
+/* --- Botão de Ação --- */
+.btn-login {
+    width: 100%;
+    padding: 14px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 12px;
+    background: #6366f1;
+    color: white;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-login:hover {
+    background: #4f46e5;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.5);
+}
+
+.btn-login:active {
+    transform: translateY(0);
+}
+
+/* --- Links de Rodapé --- */
+.footer-links {
+    margin-top: 25px;
+}
+
+.footer-links a {
+    color: #94a3b8;
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: color 0.3s;
+}
+
+.footer-links a:hover {
+    color: #f1f5f9;
+}
+
+/* --- Responsividade --- */
+@media (max-width: 480px) {
+    .login-box {
+        width: 90%;
+        padding: 40px 20px;
+    }
+}
