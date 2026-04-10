@@ -57,24 +57,41 @@ button.addEventListener('click', function(){
     if(!isRegister){
         Register(nome,email,senha,idLoja,passloja)
     }
+    Login(nome,senha)
 })
 
-async function Register(nome,email,senha,nomeloja,passLoja) {
+async function Register(nome,email,senha,idLoja,passLoja) {
     console.log("Rodando o register")
-    const dadosRegis = {nome: nome, email:email, senha:senha,nomeloja: nomeloja,passLoja: passLoja}
+    console.log("args recebidos:", { nome, email, senha, idLoja, passLoja })
     try{
         const req = await fetch("/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                body: dadosRegis
-            })
+            body: JSON.stringify({nome, email, senha, idLoja, passLoja})
         });
         const res = await req.json()
         console.log(res)
     }
     catch(err){
         console.log("Erro na requisição de registro " + err.message)
+    }
+}
+async function Login(email,password) {
+    try{
+        const req = await fetch("/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({email,password})
+        });
+        const res = await req.json()
+        if(res.ok){
+            window.location.href = 'index.html'
+        }
+        const errormsg = document.getElementById("errormsg")
+        errormsg.innerHTML = res.message
+    }
+    catch(err){
+        console.log("Erro na requisição de login " + err.message)
     }
 }
 

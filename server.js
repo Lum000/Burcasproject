@@ -1,11 +1,23 @@
 const express = require("express")
 const sqlite3 = require("sqlite3").verbose()
 const path = require("path")
+require('dotenv').config();
+
+const cookieParser = require('cookie-parser');
+
+
+const bcrypt = require('bcrypt')
+const saltRounds = 10
+
+
+const jwt = require('jsonwebtoken');
+const SECRET = process.env.JWT_SECRET
 
 const multer = require("multer")
 const res = require("express/lib/response")
 
 const app = express()
+app.use(cookieParser());
 app.use(express.json())
 app.use(express.static("public"))
 
@@ -67,7 +79,7 @@ db.serialize(() => {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user TEXT NOT NULL,
     password TEXT NOT NULL,
-    role TEXT DEFAULT user,
+    role TEXT DEFAULT 'user',
     email TEXT,
     idLoja TEXT,
     passLoja TEXT
@@ -98,24 +110,92 @@ app.use(express.urlencoded({extended:true}))
 app.use("/uploads",express.static("uploads"))
 
 
-// Login 
-app.get('/login/:user/:password', (req,res) =>{
-  const {user, password} = req.params
+//Verificar role
 
-})
+function verifyToken(req, res, next) {
+  const token = req.cookies.token
+    || req.headers.authorization?.split(' ')[1]; 
+
+  if (!token) return res.status(401).json({ error: 'Não autenticado' });
+
+  try {
+    req.user = jwt.verify(token, SECRET);
+    next();
+  } catch {
+    res.clearCookie('token');
+    return res.status(401).json({ error: 'Token inválido ou expirado' });
+  }
+}
+
+function checkRole(...roles) {
+  return (req, res, next) => {
+    if (!roles.includes(req.user?.role)) {
+      return res.status(403).json({ error: 'Sem permissão' });
+    }
+    next();
+  };
+}
+
+// Verificar usuario
+app.get('/dashboard', verifyToken, (req, res) => {
+  return res.status(200).json({ msg: `Olá, ${req.user.role}`, role: `${req.user.role}` });
+});
 
 //Registro
 
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Campos obrigatórios' });
+  }
+
+  const isEmail = email.includes('@');
+  const campo   = isEmail ? 'email' : 'user';
+  const valor   = email.trim().toLowerCase();
+
+  try {
+    db.get(`SELECT * FROM usuarios WHERE ${campo} = ?`, [valor], async (err, row) => {
+      if (err)  return res.status(500).json({ message: 'Erro no banco: ' + err.message });
+      if (!row) return res.status(401).json({ message: 'Verifique os campos' });
+
+      const valid = await bcrypt.compare(password, row.password);
+      if (!valid) return res.status(401).json({ message: 'Verifique os campos' });
+
+      const token = jwt.sign(
+        { id: row.id, role: row.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '8h' }
+      );
+
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 8 * 60 * 60 * 1000
+      });
+
+      return res.json({ ok: true, role: row.role });
+    });
+
+  } catch (err) {
+    return res.status(500).json({ message: 'Erro: ' + err.message });
+  }
+});
+
 
 app.post('/register', async (req,res) =>{
-  const bcrypt = require('bcrypt')
-  const saltRounds = 10
   const {nome,email,senha,idLoja,passLoja} = req.body
+  const nomeNorm = nome.trim().toLowerCase();
+  const emailNorm = email.trim().toLowerCase();
+  const idLojaNorm = idLoja.trim().toLowerCase();
+
+  console.log(nome,email,idLoja,passLoja,senha)
+
   try{
     const hashedpassword = await bcrypt.hash(senha,saltRounds)
     const hashedLojaPassword = await bcrypt.hash(passLoja,saltRounds)
     const query = "INSERT INTO usuarios (user,password,email,idLoja,passLoja) VALUES (?,?,?,?,?)"
-    db.query(query,[nome,hashedpassword,email,idLoja,hashedLojaPassword], (err,result) =>{
+    db.run(query,[nomeNorm,hashedpassword,emailNorm,idLojaNorm,hashedLojaPassword], (err,result) =>{
       if(err){
         return res.status(400).json({message:"Erro ao registrar usuario" + err.message})
       }
@@ -131,19 +211,6 @@ app.post('/register', async (req,res) =>{
 
 
 
-// Verificar informações do usuario
-app.get('/api/user-info', (req, res) => {
-    if (req.session && req.session.userId) {
-        res.json({
-            logado: true,
-            userId: req.session.userId,
-            role: req.session.userRole,
-            nome: req.session.userName 
-        });
-    } else {
-        res.json({ logado: false, role: null });
-    }
-});
 
 /* Recupera o id da mesa selecionada */
 

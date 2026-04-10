@@ -1,24 +1,13 @@
 async function aplicarPermissoes() {
-    try {
-        const response = await fetch('/api/user-info');
-        const user = await response.json();
+    try{
+        const req = await fetch('/dashboard')
+        const res = await req.json()
+        if(res.role != 'admin'){
 
-        if (user.logado) {
-            console.log("Usuário logado como:", user.role);
-            
-            if (user.role !== 'admin') {
-                const botoesRemover = document.querySelectorAll('.btn-remover');
-                botoesRemover.forEach(btn => btn.style.display = 'none');
-                
-                if (document.querySelector('.btn-fechar')) {
-                    document.querySelector('.btn-fechar').style.disabled = true;
-                }
-            }
-        } else {
-            window.location.href = 'login.html';
         }
-    } catch (error) {
-        console.error("Erro ao verificar permissões:", error);
+    }
+    catch(err){
+        console.log(err)
     }
 }
 
