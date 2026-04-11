@@ -1,284 +1,365 @@
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:'Segoe UI', Arial, sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap');
+
+:root {
+  --amarelo: #FFD400;
+  --amarelo-escuro: #E6B800;
+  --preto: #0a0a0a;
+  --card-bg: #141414;
+  --card-border: #222;
+  --texto: #f0f0f0;
+  --texto-muted: #888;
+  --livre: #00c97a;
+  --livre-bg: rgba(0, 201, 122, 0.08);
+  --ocupada: #ff4444;
+  --ocupada-bg: rgba(255, 68, 68, 0.08);
+  --fechando: #ffaa00;
+  --fechando-bg: rgba(255, 170, 0, 0.08);
+  --sidebar-w: 260px;
+  --radius: 14px;
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-body{
-background:radial-gradient(circle at top,#1a1a1a,#000);
-color:white;
-min-height:100vh;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-/* HEADER */
-
-header{
-
-background:linear-gradient(90deg,#FFD400,#ffbf00);
-
-color:#000;
-
-font-size:22px;
-
-font-weight:bold;
-
-display:flex;
-
-align-items:center;
-
-justify-content:space-between;
-
-padding:15px 25px;
-
-letter-spacing:1px;
-
-box-shadow:0 4px 10px rgba(0,0,0,0.6);
-
-position:sticky;
-
-top:0;
-
-z-index:100;
-
+body {
+  font-family: 'DM Sans', sans-serif;
+  background-color: var(--preto);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255, 212, 0, 0.07), transparent),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 60px,
+      rgba(255,255,255,0.015) 60px,
+      rgba(255,255,255,0.015) 61px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 60px,
+      rgba(255,255,255,0.015) 60px,
+      rgba(255,255,255,0.015) 61px
+    );
+  color: var(--texto);
+  min-height: 100vh;
 }
 
-.logo{
+/* ── HEADER ── */
 
-font-size:22px;
-
+header {
+  background: var(--amarelo);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  height: 62px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.25), 0 8px 32px rgba(0,0,0,0.4);
 }
 
-/* MENU NORMAL */
-
-.nav{
-
-display:flex;
-
-gap:20px;
-
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.nav a{
-
-text-decoration:none;
-
-color:black;
-
-font-weight:bold;
-
-transition:0.2s;
-
+.nomeLoja {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 26px;
+  letter-spacing: 2px;
+  color: #000;
+  line-height: 1;
 }
 
-.nav a:hover{
+/* ── NAV ── */
 
-transform:scale(1.1);
-
+.nav {
+  display: flex;
+  gap: 4px;
 }
 
-/* BOTÃO SANDUICHE */
-
-.menu-btn{
-
-font-size:26px;
-
-cursor:pointer;
-
-display:none;
-
+.nav a {
+  text-decoration: none;
+  color: rgba(0,0,0,0.65);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  transition: var(--transition);
+  text-transform: uppercase;
 }
 
-/* SIDEBAR MOBILE */
-
-.sidebar{
-
-position:fixed;
-
-top:0;
-
-left:-260px;
-
-width:260px;
-
-height:100%;
-
-background:#111;
-
-padding:30px;
-
-transition:0.3s;
-
-box-shadow:5px 0 15px rgba(0,0,0,0.7);
-
-z-index:200;
-
+.nav a:hover {
+  background: rgba(0,0,0,0.1);
+  color: #000;
 }
 
-.sidebar.active{
-
-left:0;
-
+.nav a.adminpanel{
+  background: #0000006f;
+  color: var(--amarelo);
+  padding: 7px 16px;
+}
+.nav a.active{
+    background: #000;
+    color: var(--amarelo);
+    padding: 7px 16px;
 }
 
-.sidebar h2{
-
-color:#FFD400;
-
-margin-bottom:20px;
-
+.nav a.adminpanel:hover {
+  background: #1a1a1a;
 }
 
-.sidebar a{
+/* ── BOTÃO SANDUÍCHE ── */
 
-display:block;
-
-color:white;
-
-text-decoration:none;
-
-margin:15px 0;
-
-font-size:18px;
-
-transition:0.2s;
-
+.menu-btn {
+  font-size: 24px;
+  cursor: pointer;
+  display: none;
+  color: #000;
+  line-height: 1;
+  padding: 4px;
+  border-radius: 6px;
+  transition: var(--transition);
 }
 
-.sidebar a:hover{
-
-color:#FFD400;
-
+.menu-btn:hover {
+  background: rgba(0,0,0,0.1);
 }
 
-/* CONTAINER DAS MESAS */
+/* ── SIDEBAR ── */
 
-#mesasContainer{
-
-max-width:1200px;
-
-margin:auto;
-
-padding:30px;
-
-display:grid;
-
-grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-
-gap:25px;
-
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: calc(-1 * var(--sidebar-w) - 20px);
+  width: var(--sidebar-w);
+  height: 100%;
+  background: #111;
+  padding: 32px 24px;
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 6px 0 30px rgba(0,0,0,0.8);
+  z-index: 200;
+  border-right: 1px solid #222;
 }
 
-/* CARD DA MESA */
-
-.mesa{
-
-background:#1c1c1c;
-
-border-radius:15px;
-
-height:140px;
-
-display:flex;
-
-flex-direction:column;
-
-justify-content:center;
-
-align-items:center;
-
-font-size:22px;
-
-font-weight:bold;
-
-cursor:pointer;
-
-transition:0.25s;
-
-border:3px solid transparent;
-
-box-shadow:0 6px 20px rgba(0,0,0,0.5);
-
+.sidebar.active {
+  left: 0;
 }
 
-/* HOVER */
-
-.mesa:hover{
-
-transform:scale(1.05);
-
-box-shadow:0 10px 30px rgba(0,0,0,0.8);
-
+.sidebar h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 3px;
+  color: var(--amarelo);
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #222;
 }
 
-/* NUMERO */
-
-.numero{
-
-font-size:32px;
-
-margin-bottom:5px;
-
+.sidebar a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--texto-muted);
+  text-decoration: none;
+  margin: 4px 0;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: 8px;
+  transition: var(--transition);
 }
 
-/* STATUS */
-
-.status{
-
-font-size:14px;
-
-opacity:0.8;
-
+.sidebar a:hover {
+  color: var(--amarelo);
+  background: rgba(255, 212, 0, 0.06);
 }
 
-/* STATUS CORES */
-
-.livre{
-
-border-color:#2ecc71;
-background-color: #2ecc7092;
-
+.sidebar a.adminpanel {
+  color: var(--amarelo);
+  border: 1px solid rgba(255,212,0,0.2);
+  margin-top: 16px;
 }
 
-.ocupada{
-
-border-color:#e74c3c;
-background-color: #e74d3c81;
-
+.sidebar a.adminpanel:hover {
+  background: rgba(255, 212, 0, 0.1);
 }
 
-.fechando{
+/* ── CONTAINER MESAS ── */
 
-border-color:#f1c40f;
-
-color:#f1c40f;
-
+#mesasContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 36px 28px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 20px;
 }
 
-/* RESPONSIVO */
+/* ── CARD DA MESA ── */
 
-@media (max-width:768px){
-
-.nav{
-
-display:none;
-
+.mesa {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  height: 148px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+  border: 1.5px solid var(--card-border);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  position: relative;
+  overflow: hidden;
 }
 
-.menu-btn{
-
-display:block;
-
+/* Brilho sutil no hover */
+.mesa::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.04), transparent 70%);
+  opacity: 0;
+  transition: opacity var(--transition);
 }
 
+.mesa:hover::before {
+  opacity: 1;
 }
 
-@media (max-width:600px){
-
-#mesasContainer{
-
-grid-template-columns:repeat(2,1fr);
-
+.mesa:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
 }
 
+.mesa:active {
+  transform: translateY(-2px);
+}
+
+/* ── NÚMERO ── */
+
+.numero {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: 1px;
+  color: var(--texto);
+}
+
+/* ── STATUS ── */
+
+.status {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+/* ── STATUS: LIVRE ── */
+
+.mesa.livre {
+  border-color: rgba(0, 201, 122, 0.3);
+  background: linear-gradient(160deg, #141414, rgba(0, 201, 122, 0.2));
+}
+
+.mesa.livre:hover {
+  border-color: var(--livre);
+  box-shadow: 0 12px 32px rgba(0, 201, 122, 0.12);
+}
+
+.mesa.livre .numero {
+  color: var(--livre);
+}
+
+.mesa.livre .status {
+  background: var(--livre-bg);
+  color: var(--livre);
+  border: 1px solid rgba(0, 201, 122, 0.2);
+}
+
+/* ── STATUS: OCUPADA ── */
+
+.mesa.ocupada {
+  border-color: rgba(255, 68, 68, 0.3);
+  background: linear-gradient(160deg, #141414, rgba(248, 38, 38, 0.2));
+}
+
+.mesa.ocupada:hover {
+  border-color: var(--ocupada);
+  box-shadow: 0 12px 32px rgba(255, 68, 68, 0.12);
+}
+
+.mesa.ocupada .numero {
+  color: var(--ocupada);
+}
+
+.mesa.ocupada .status {
+  background: var(--ocupada-bg);
+  color: var(--ocupada);
+  border: 1px solid rgba(255, 68, 68, 0.2);
+}
+
+/* ── STATUS: FECHANDO ── */
+
+.mesa.fechando {
+  border-color: rgba(255, 170, 0, 0.3);
+  background: linear-gradient(160deg, #141414, rgba(255, 170, 0, 0.04));
+}
+
+.mesa.fechando:hover {
+  border-color: var(--fechando);
+  box-shadow: 0 12px 32px rgba(255, 170, 0, 0.12);
+}
+
+.mesa.fechando .numero {
+  color: var(--fechando);
+}
+
+.mesa.fechando .status {
+  background: var(--fechando-bg);
+  color: var(--fechando);
+  border: 1px solid rgba(255, 170, 0, 0.2);
+  animation: pulsar 2s ease-in-out infinite;
+}
+
+@keyframes pulsar {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+/* ── RESPONSIVO ── */
+
+@media (max-width: 768px) {
+  .nav    { display: none; }
+  .menu-btn { display: block; }
+
+  #mesasContainer {
+    padding: 20px 16px;
+    gap: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  #mesasContainer {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mesa {
+    height: 130px;
+  }
+
+  .numero {
+    font-size: 38px;
+  }
 }

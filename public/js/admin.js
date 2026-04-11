@@ -1,32 +1,3 @@
-function salvarInfo(){
-
-const nome = document.getElementById("nomeLoja").value
-
-localStorage.setItem("nomeLoja", nome)
-
-alert("Informações salvas")
-
-}
-
-
-document.getElementById("logoInput").addEventListener("change", function(){
-
-const file = this.files[0]
-
-const reader = new FileReader()
-
-reader.onload = function(e){
-
-document.getElementById("previewLogo").src = e.target.result
-localStorage.setItem("logoLoja", e.target.result)
-
-}
-
-reader.readAsDataURL(file)
-
-})
-
-
 function gerarMesas(){
 
 const qtd = document.getElementById("qtdMesas").value
@@ -52,29 +23,19 @@ container.appendChild(mesa)
 }
 
 
-window.onload = function(){
 
-const nome = localStorage.getItem("nomeLoja")
 
-const logo = localStorage.getItem("logoLoja")
 
-const qtd = localStorage.getItem("qtdMesas")
-
-if(nome) document.getElementById("nomeLoja").value = nome
-
-if(logo) document.getElementById("previewLogo").src = logo
-
-if(qtd){
-
-document.getElementById("qtdMesas").value = qtd
-
-gerarMesas()
-
-}
 
 document.getElementById("formMesas").addEventListener("submit", async (e)=>{
 
     e.preventDefault()
+
+    const res = await fetch('/dashboard', {
+        credentials: 'include' 
+    });
+    const data = await res.json()
+    const idLoja = data.idLoja
 
     const qtyMesas = document.getElementById("qtdMesas").value
 
@@ -84,7 +45,8 @@ document.getElementById("formMesas").addEventListener("submit", async (e)=>{
         "Content-Type":"application/json"
         },
         body:JSON.stringify({
-        mesas:qtyMesas
+        mesas:qtyMesas,
+        idLoja: idLoja
         })
     })
     console.log("Enviado")
@@ -92,4 +54,3 @@ document.getElementById("formMesas").addEventListener("submit", async (e)=>{
 
 });
 
-}

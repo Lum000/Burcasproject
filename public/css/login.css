@@ -1,197 +1,304 @@
-/* --- Reset e Fontes --- */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap');
+
+:root {
+  --amarelo: #FFD400;
+  --amarelo-escuro: #E6B800;
+  --preto: #0a0a0a;
+  --card-bg: #141414;
+  --card-bg2: #1a1a1a;
+  --card-border: #222;
+  --texto: #f0f0f0;
+  --texto-muted: #888;
+  --texto-hint: #444;
+  --vermelho: #ff4444;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #0f172a; /* Fundo escuro profundo */
-    overflow: hidden;
-    position: relative;
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--preto);
+  background-image:
+    radial-gradient(ellipse 60% 50% at 50% -5%, rgba(255, 212, 0, 0.12), transparent),
+    repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(255,255,255,0.012) 61px),
+    repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(255,255,255,0.012) 61px);
+  overflow: hidden;
+  position: relative;
 }
 
-/* --- Animação de Fundo (Blobs) --- */
-.bg-animation {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    filter: blur(80px);
+/* ── BRILHO DECORATIVO ── */
+body::before {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(255,212,0,0.06) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
-.blob {
-    position: absolute;
-    border-radius: 50%;
-    opacity: 0.6;
-    animation: move 20s infinite alternate ease-in-out;
-}
-
-.blob-1 {
-    width: 400px;
-    height: 400px;
-    background: #6366f1;
-    top: -10%;
-    left: 10%;
-}
-
-.blob-2 {
-    width: 500px;
-    height: 500px;
-    background: #a855f7;
-    bottom: -10%;
-    right: 10%;
-    animation-duration: 25s;
-}
-
-.blob-3 {
-    width: 300px;
-    height: 300px;
-    background: #ec4899;
-    top: 30%;
-    left: 35%;
-    animation-duration: 15s;
-}
-
-@keyframes move {
-    from { transform: translate(0, 0) scale(1); }
-    to { transform: translate(120px, 80px) scale(1.1); }
-}
-
-/* --- Container Principal --- */
+/* ── CONTAINER ── */
 .login-container {
-    perspective: 1000px;
-    z-index: 10;
+  z-index: 10;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
 }
 
-/* --- Caixa de Autenticação (Glassmorphism) --- */
+/* ── CAIXA DE LOGIN ── */
 .login-box {
-    background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 50px 40px;
-    border-radius: 24px;
-    width: 400px;
-    text-align: center;
-    color: white;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--card-bg);
+  border: 1.5px solid var(--card-border);
+  border-top: 1.5px solid #2a2a2a;
+  padding: 48px 40px;
+  border-radius: var(--radius);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow:
+    0 0 0 1px rgba(255,212,0,0.04),
+    0 32px 64px rgba(0,0,0,0.6);
+  animation: fadeUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
-h2 {
-    font-size: 2.2rem;
-    margin-bottom: 8px;
-    letter-spacing: -1px;
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-p {
-    color: #94a3b8;
-    margin-bottom: 35px;
-    font-size: 0.95rem;
+/* ── LOGO / TÍTULO ── */
+.login-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  background: var(--amarelo);
+  border-radius: 14px;
+  margin-bottom: 20px;
+  font-size: 24px;
 }
 
-/* --- Área de Inputs --- */
-.input-area {
-    text-align: left;
+.login-box h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px;
+  letter-spacing: 2px;
+  color: var(--texto);
+  margin-bottom: 6px;
+  font-weight: 400;
 }
+
+.login-box p {
+  color: var(--texto-muted);
+  margin-bottom: 36px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── TABS LOGIN / REGISTRO ── */
+.auth-tabs {
+  display: flex;
+  background: var(--card-bg2);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  margin-bottom: 32px;
+  border: 1.5px solid var(--card-border);
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 9px;
+  border: none;
+  background: transparent;
+  color: var(--texto-muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  border-radius: 7px;
+  transition: var(--transition);
+}
+
+.auth-tab.active {
+  background: var(--amarelo);
+  color: #000;
+}
+
+/* ── INPUTS ── */
+.input-area { text-align: left; }
 
 .input-group {
-    position: relative;
-    margin-bottom: 25px;
-    transition: all 0.3s ease;
+  position: relative;
+  margin-bottom: 20px;
 }
 
 .input-group input {
-    width: 100%;
-    padding: 12px 4px;
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-    outline: none;
-    color: white;
-    font-size: 1rem;
-    transition: border-color 0.3s;
+  width: 100%;
+  padding: 13px 16px;
+  background: var(--card-bg2);
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  color: var(--texto);
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  transition: border-color var(--transition), background var(--transition);
 }
 
-.input-group label {
-    position: absolute;
-    left: 4px;
-    top: 12px;
-    color: #64748b;
-    pointer-events: none;
-    transition: all 0.3s ease;
-}
-
-/* Animação do Label (Sobe quando foca ou tem texto) */
-.input-group input:focus ~ label,
-.input-group input:valid ~ label {
-    top: -14px;
-    font-size: 0.75rem;
-    color: #818cf8;
-    font-weight: 600;
+.input-group input::placeholder {
+  color: var(--texto-hint);
 }
 
 .input-group input:focus {
-    border-bottom-color: #6366f1;
+  border-color: var(--amarelo);
+  background: rgba(255,212,0,0.03);
 }
 
-/* Estilo específico para o campo de E-mail animado */
+.input-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texto-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+/* Campo animado (registro) */
 #email-group {
-    overflow: hidden;
-    transition: opacity 0.4s ease, transform 0.4s ease, margin 0.4s ease;
+  overflow: hidden;
+  transition: opacity 0.35s ease, max-height 0.35s ease, margin 0.35s ease;
+  max-height: 100px;
 }
 
-/* --- Botão de Ação --- */
+#email-group.hidden {
+  opacity: 0;
+  max-height: 0;
+  margin-bottom: 0;
+  pointer-events: none;
+}
+
+/* ── ERRO ── */
+.error-msg {
+  font-size: 12px;
+  color: var(--vermelho);
+  margin-top: -12px;
+  margin-bottom: 14px;
+  display: none;
+  text-align: left;
+}
+
+/* ── BOTÃO PRINCIPAL ── */
 .btn-login {
-    width: 100%;
-    padding: 14px;
-    margin-top: 10px;
-    border: none;
-    border-radius: 12px;
-    background: #6366f1;
-    color: white;
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s ease;
+  width: 100%;
+  padding: 14px;
+  margin-top: 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--amarelo);
+  color: #000;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'DM Sans', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: var(--transition);
 }
 
 .btn-login:hover {
-    background: #4f46e5;
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.5);
+  background: var(--amarelo-escuro);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255,212,0,0.2);
 }
 
-.btn-login:active {
-    transform: translateY(0);
+.btn-login:active { transform: translateY(0); }
+
+.btn-login:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
-/* --- Links de Rodapé --- */
+/* ── FOOTER ── */
 .footer-links {
-    margin-top: 25px;
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
 }
 
 .footer-links a {
-    color: #94a3b8;
-    text-decoration: none;
-    font-size: 0.85rem;
-    transition: color 0.3s;
+  color: var(--texto-hint);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 500;
+  transition: color var(--transition);
 }
 
-.footer-links a:hover {
-    color: #f1f5f9;
+.footer-links a:hover { color: var(--texto-muted); }
+
+/* ── DIVIDER ── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+  color: var(--texto-hint);
+  font-size: 12px;
 }
 
-/* --- Responsividade --- */
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--card-border);
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--card-bg2);
+  color: var(--texto);
+  border: 1.5px solid var(--card-border);
+  padding: 12px 24px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+  z-index: 9999;
+  white-space: nowrap;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast.success { color: #00c97a; border-color: rgba(0,201,122,0.3); }
+.toast.error   { color: var(--vermelho); border-color: rgba(255,68,68,0.3); }
+
+/* ── RESPONSIVO ── */
 @media (max-width: 480px) {
-    .login-box {
-        width: 90%;
-        padding: 40px 20px;
-    }
+  .login-box {
+    padding: 36px 24px;
+  }
 }

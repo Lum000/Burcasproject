@@ -1,10 +1,15 @@
+let isAdmin = false;
+
+
 async function aplicarPermissoes() {
     try{
         const req = await fetch('/dashboard')
         const res = await req.json()
-        if(res.role != 'admin'){
-
+        if(res.error){
+            window.location.href = 'login.html'
         }
+        isAdmin = res.role
+        togleAdmin()
     }
     catch(err){
         console.log(err)
@@ -12,6 +17,22 @@ async function aplicarPermissoes() {
 }
 
 window.onload = aplicarPermissoes;
+
+function togleAdmin(){
+    console.log(isAdmin)
+    const adminpanel = document.querySelectorAll('.adminpanel')
+    if(isAdmin === 'admin'){
+        adminpanel.forEach((item) =>{
+            item.style.display = 'block';
+        })
+    }
+    else{
+        adminpanel.forEach((item) =>{
+        item.style.display = 'none';
+    })
+    }
+
+}
 
 
 

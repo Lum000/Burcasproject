@@ -1,251 +1,591 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastrar Produto - BurcasProject</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #121212;
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastrar Produto</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --amarelo: #FFD400;
+      --amarelo-escuro: #E6B800;
+      --preto: #0a0a0a;
+      --card-bg: #141414;
+      --card-bg2: #1a1a1a;
+      --card-border: #222;
+      --texto: #f0f0f0;
+      --texto-muted: #888;
+      --texto-hint: #3a3a3a;
+      --verde: #00c97a;
+      --vermelho: #ff4444;
+      --radius: 14px;
+      --radius-sm: 9px;
+      --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
+    }
 
-        .box {
-            background: #1e1e1e;
-            padding: 25px;
-            border-radius: 10px;
-            width: 380px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        h2 { text-align: center; margin-bottom: 20px; color: #28a745; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background-color: var(--preto);
+      background-image:
+        radial-gradient(ellipse 70% 40% at 50% 0%, rgba(255,212,0,0.07), transparent),
+        repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(255,255,255,0.012) 61px),
+        repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(255,255,255,0.012) 61px);
+      color: var(--texto);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 20px;
+    }
 
-        input, select, textarea {
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            border: 1px solid #333;
-            border-radius: 5px;
-            background: #2a2a2a;
-            color: white;
-            box-sizing: border-box;
-            font-family: inherit;
-        }
+    /* ── CARD ── */
+    .box {
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+      overflow: hidden;
+      animation: fadeUp 0.35s cubic-bezier(0.4,0,0.2,1) both;
+    }
 
-        textarea {
-            resize: vertical;
-            min-height: 60px;
-        }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
-        .checkbox-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 15px;
-            cursor: pointer;
-            font-size: 14px;
-        }
+    /* ── HEADER DO CARD ── */
+    .box-header {
+      background: var(--amarelo);
+      padding: 22px 28px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
 
-        #extra-checkbox { width: auto; margin: 0; }
+    .box-header-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(0,0,0,0.12);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
 
-        /* Container de Extras Dinâmicos */
-        #container-lista-extras {
-            display: none;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 10px;
-            background: #252525;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px dashed #444;
-        }
+    .box-header h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 2px;
+      color: #000;
+      font-weight: 400;
+      line-height: 1;
+    }
 
-        .linha-extra {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 5px;
-        }
+    .box-header p {
+      font-size: 12px;
+      color: rgba(0,0,0,0.55);
+      margin-top: 2px;
+    }
 
-        .linha-extra input { margin-top: 0; font-size: 13px; }
+    /* ── BODY ── */
+    .box-body { padding: 28px; }
 
-        .btn-remove {
-            background: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 0 10px;
-            cursor: pointer;
-        }
+    /* ── SEÇÕES ── */
+    .section {
+      margin-bottom: 28px;
+    }
 
-        .btn-add-extra {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 8px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: 0.3s;
-        }
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--texto-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-        button#btn-salvar {
-            width: 100%;
-            padding: 12px;
-            margin-top: 20px;
-            background: #28a745;
-            border: none;
-            color: white;
-            font-weight: bold;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--card-border);
+    }
 
-        button#btn-salvar:hover { background: #1f8c39; }
+    /* ── INPUTS ── */
+    .field { margin-bottom: 14px; }
 
-        .preview {
-            margin-top: 15px;
-            width: 100%;
-            height: 150px;
-            background: #333;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 5px;
-            overflow: hidden;
-            border: 1px solid #444;
-        }
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--texto-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
 
-        .preview img { width: 100%; height: 100%; object-fit: cover; }
-    </style>
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      padding: 11px 14px;
+      background: var(--card-bg2);
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      color: var(--texto);
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      transition: border-color var(--transition), background var(--transition);
+    }
+
+    .field input::placeholder,
+    .field textarea::placeholder { color: var(--texto-hint); }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: var(--amarelo);
+      background: rgba(255,212,0,0.02);
+    }
+
+    .field textarea {
+      resize: vertical;
+      min-height: 80px;
+      line-height: 1.5;
+    }
+
+    .field select option { background: var(--card-bg2); }
+
+    /* ── ROW 2 COLUNAS ── */
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* ── TOGGLE EXTRAS ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--card-bg2);
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: border-color var(--transition);
+      margin-bottom: 14px;
+    }
+
+    .toggle-row:hover { border-color: #333; }
+    .toggle-row.active { border-color: var(--amarelo); }
+
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--texto);
+      user-select: none;
+    }
+
+    .toggle-label span { font-size: 16px; }
+
+    .toggle-switch {
+      width: 36px;
+      height: 20px;
+      background: var(--card-border);
+      border-radius: 10px;
+      position: relative;
+      transition: background var(--transition);
+      flex-shrink: 0;
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: #555;
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: transform var(--transition), background var(--transition);
+    }
+
+    .toggle-row.active .toggle-switch { background: rgba(255,212,0,0.2); }
+    .toggle-row.active .toggle-switch::after { transform: translateX(16px); background: var(--amarelo); }
+
+    input#extra-checkbox { display: none; }
+
+    /* ── CONTAINER EXTRAS ── */
+    #container-lista-extras {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(0,0,0,0.2);
+      border: 1.5px dashed var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .linha-extra {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .linha-extra input {
+      padding: 9px 12px;
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      color: var(--texto);
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+
+    .linha-extra input:focus { border-color: var(--amarelo); }
+    .linha-extra input:first-child { flex: 2; }
+    .linha-extra input:nth-child(2) { flex: 1; }
+
+    .btn-remove {
+      background: var(--vermelho-bg, rgba(255,68,68,0.1));
+      color: var(--vermelho);
+      border: 1.5px solid rgba(255,68,68,0.2);
+      border-radius: var(--radius-sm);
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: var(--transition);
+    }
+
+    .btn-remove:hover { background: var(--vermelho); color: white; }
+
+    .btn-add-extra {
+      background: transparent;
+      color: var(--texto-muted);
+      border: 1.5px dashed var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 9px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      width: 100%;
+      transition: var(--transition);
+      margin-top: 4px;
+    }
+
+    .btn-add-extra:hover {
+      border-color: var(--amarelo);
+      color: var(--amarelo);
+      background: rgba(255,212,0,0.03);
+    }
+
+    /* ── PREVIEW IMAGEM ── */
+    .preview {
+      width: 100%;
+      height: 160px;
+      background: var(--card-bg2);
+      border: 1.5px dashed var(--card-border);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color var(--transition);
+      position: relative;
+      margin-top: 10px;
+    }
+
+    .preview:hover { border-color: var(--amarelo); }
+
+    .preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .preview-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: var(--texto-hint);
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    .preview-placeholder-icon {
+      font-size: 28px;
+      opacity: 0.4;
+    }
+
+    input[type="file"] { display: none; }
+
+    /* ── BOTÃO SALVAR ── */
+    .btn-salvar {
+      width: 100%;
+      padding: 14px;
+      background: var(--amarelo);
+      color: #000;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'DM Sans', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: var(--transition);
+      margin-top: 8px;
+    }
+
+    .btn-salvar:hover {
+      background: var(--amarelo-escuro);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(255,212,0,0.2);
+    }
+
+    .btn-salvar:active { transform: translateY(0); }
+
+    .btn-salvar:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--card-bg2);
+      color: var(--verde);
+      border: 1.5px solid rgba(0,201,122,0.3);
+      padding: 12px 24px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+      z-index: 9999;
+      white-space: nowrap;
+    }
+
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { color: var(--vermelho); border-color: rgba(255,68,68,0.3); }
+
+    /* ── RESPONSIVO ── */
+    @media (max-width: 480px) {
+      body { padding: 0; align-items: stretch; }
+      .box { border-radius: 0; border-left: none; border-right: none; max-width: 100%; }
+      .field-row { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
 
 <div class="box">
-    <h2>Adicionar Produto</h2>
+  <div class="box-header">
+    <div class="box-header-icon">🍔</div>
+    <div>
+      <h2>Novo Produto</h2>
+      <p>Preencha os dados do item do cardápio</p>
+    </div>
+  </div>
 
-    <input id="nome" placeholder="Nome do produto (ex: X-Salada)">
-    
-    <textarea id="descricao" placeholder="Descrição do que vem no prato..."></textarea>
-    
-    <input id="preco" type="number" step="0.01" placeholder="Preço Base (R$)">
+  <div class="box-body">
 
-    <label class="checkbox-container">
+    <!-- INFORMAÇÕES -->
+    <div class="section">
+      <div class="section-label">Informações</div>
+
+      <div class="field">
+        <label>Nome do produto</label>
+        <input id="nome" placeholder="Ex: X-Salada Especial">
+      </div>
+
+      <div class="field">
+        <label>Descrição</label>
+        <textarea id="descricao" placeholder="O que vem no prato? Ingredientes, detalhes..."></textarea>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Preço (R$)</label>
+          <input id="preco" type="number" step="0.01" min="0" placeholder="0,00">
+        </div>
+        <div class="field">
+          <label>Categoria</label>
+          <select id="categoria">
+            <option value="lanches">🍔 Lanches</option>
+            <option value="porcoes">🍟 Porções</option>
+            <option value="bebidas">🥤 Bebidas</option>
+            <option value="sobremesas">🍰 Sobremesas</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXTRAS -->
+    <div class="section">
+      <div class="section-label">Adicionais</div>
+
+      <div class="toggle-row" id="toggle-extras" onclick="toggleExtras()">
+        <label class="toggle-label">
+          <span>➕</span>
+          Possui adicionais / extras?
+        </label>
+        <div class="toggle-switch"></div>
         <input id="extra-checkbox" type="checkbox">
-        <span>Possui Adicionais/Extras?</span>
-    </label>
+      </div>
 
-    <div id="container-lista-extras">
+      <div id="container-lista-extras">
         <div id="lista-inputs-extras"></div>
-        <button type="button" class="btn-add-extra" onclick="adicionarNovoCampoExtra()">+ Adicionar Novo Extra</button>
+        <button type="button" class="btn-add-extra" onclick="adicionarNovoCampoExtra()">
+          + Adicionar extra
+        </button>
+      </div>
     </div>
 
-    <select id="categoria">
-        <option value="lanches">Lanches</option>
-        <option value="porcoes">Porções</option>
-        <option value="bebidas">Bebidas</option>
-        <option value="sobremesas">Sobremesas</option>
-    </select>
+    <!-- IMAGEM -->
+    <div class="section">
+      <div class="section-label">Imagem</div>
 
-    <input type="file" id="imagem" accept="image/*" onchange="previewImg()">
-
-    <div class="preview">
-        <img id="previewImg" src="" alt="Sua imagem aparecerá aqui" style="display: none;">
-        <span id="placeholder-text">Sem imagem</span>
+      <div class="preview" onclick="document.getElementById('imagem').click()">
+        <img id="previewImg" src="" alt="preview">
+        <div class="preview-placeholder" id="placeholder-text">
+          <div class="preview-placeholder-icon">📷</div>
+          <span>Clique para selecionar imagem</span>
+        </div>
+      </div>
+      <input type="file" id="imagem" accept="image/*" onchange="previewImagem()">
     </div>
 
-    <button id="btn-salvar" onclick="addProduct()">Salvar Produto</button>
+    <button class="btn-salvar" id="btn-salvar" onclick="addProduct()">
+      Salvar produto
+    </button>
+
+  </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
-    const checkboxExtras = document.getElementById("extra-checkbox");
-    const containerExtras = document.getElementById("container-lista-extras");
-    const listaInputs = document.getElementById("lista-inputs-extras");
+  const checkboxExtras  = document.getElementById('extra-checkbox');
+  const containerExtras = document.getElementById('container-lista-extras');
+  const listaInputs     = document.getElementById('lista-inputs-extras');
+  const toggleRow       = document.getElementById('toggle-extras');
 
-    checkboxExtras.addEventListener("change", function() {
-        containerExtras.style.display = this.checked ? "flex" : "none";
-        if (this.checked && listaInputs.children.length === 0) {
-            adicionarNovoCampoExtra();
-        }
-    });
+  function toggleExtras() {
+    const ativo = !checkboxExtras.checked;
+    checkboxExtras.checked = ativo;
+    toggleRow.classList.toggle('active', ativo);
+    containerExtras.style.display = ativo ? 'flex' : 'none';
+    if (ativo && listaInputs.children.length === 0) adicionarNovoCampoExtra();
+  }
 
-    function adicionarNovoCampoExtra() {
-        const divLinha = document.createElement("div");
-        divLinha.className = "linha-extra";
-        divLinha.innerHTML = `
-            <input type="text" class="extra-nome" placeholder="Nome (Ex: Ovo)" style="flex: 2;">
-            <input type="number" class="extra-preco" step="0.01" placeholder="R$" style="flex: 1;">
-            <button type="button" class="btn-remove" onclick="this.parentElement.remove()">✕</button>
-        `;
-        listaInputs.appendChild(divLinha);
+  function adicionarNovoCampoExtra() {
+    const div = document.createElement('div');
+    div.className = 'linha-extra';
+    div.innerHTML = `
+      <input type="text"   class="extra-nome"  placeholder="Nome (Ex: Ovo)">
+      <input type="number" class="extra-preco" step="0.01" min="0" placeholder="R$">
+      <button type="button" class="btn-remove" onclick="this.parentElement.remove()">✕</button>
+    `;
+    listaInputs.appendChild(div);
+  }
+
+  function previewImagem() {
+    const file = document.getElementById('imagem').files[0];
+    if (!file) return;
+    const img  = document.getElementById('previewImg');
+    const text = document.getElementById('placeholder-text');
+    img.src = URL.createObjectURL(file);
+    img.style.display = 'block';
+    text.style.display = 'none';
+  }
+
+  function showToast(msg, tipo = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${tipo} show`;
+    setTimeout(() => t.className = 'toast', 3000);
+  }
+
+  async function addProduct() {
+    const nome      = document.getElementById('nome').value.trim();
+    const descricao = document.getElementById('descricao').value.trim();
+    const preco     = document.getElementById('preco').value;
+    const categoria = document.getElementById('categoria').value;
+    const imagem    = document.getElementById('imagem').files[0];
+    const btn       = document.getElementById('btn-salvar');
+
+    if (!nome || !preco) {
+      showToast('Preencha o nome e o preço.', 'error');
+      return;
     }
 
-    function previewImg() {
-        const file = document.getElementById("imagem").files[0];
-        const img = document.getElementById("previewImg");
-        const text = document.getElementById("placeholder-text");
-        if (file) {
-            img.src = URL.createObjectURL(file);
-            img.style.display = "block";
-            text.style.display = "none";
-        }
+    const extras = [];
+    if (checkboxExtras.checked) {
+      document.querySelectorAll('.extra-nome').forEach((input, i) => {
+        const n = input.value.trim();
+        const p = parseFloat(document.querySelectorAll('.extra-preco')[i].value);
+        if (n && !isNaN(p)) extras.push({ nome: n, preco: p });
+      });
     }
 
-    async function addProduct() {
-        const nome = document.getElementById("nome").value;
-        const descricao = document.getElementById("descricao").value; // Captura a descrição
-        const preco = document.getElementById("preco").value;
-        const categoria = document.getElementById("categoria").value;
-        const imagem = document.getElementById("imagem").files[0];
+    const formData = new FormData();
+    formData.append('nome', nome);
+    formData.append('descricao', descricao);
+    formData.append('preco', preco);
+    formData.append('categoria', categoria);
+    formData.append('extras', JSON.stringify(extras));
+    if (imagem) formData.append('imagem', imagem);
 
-        if (!nome || !preco) {
-            alert("Por favor, preencha o nome e o preço base.");
-            return;
-        }
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
 
-        const extras = [];
-        if (checkboxExtras.checked) {
-            const nomes = document.querySelectorAll(".extra-nome");
-            const precos = document.querySelectorAll(".extra-preco");
-            nomes.forEach((input, i) => {
-                const n = input.value.trim();
-                const p = parseFloat(precos[i].value);
-                if (n && !isNaN(p)) extras.push({ nome: n, preco: p });
-            });
-        }
-
-        const formData = new FormData();
-        formData.append("nome", nome);
-        formData.append("descricao", descricao); // Envia a descrição
-        formData.append("preco", preco);
-        formData.append("categoria", categoria);
-        formData.append("imagem", imagem);
-        formData.append("extras", JSON.stringify(extras));
-
-        try {
-            const response = await fetch("/addProduct", {
-                method: "POST",
-                body: formData
-            });
-
-            if (response.ok) {
-                alert("Produto cadastrado com sucesso!");
-                location.reload();
-            } else {
-                alert("Erro ao cadastrar.");
-            }
-        } catch (error) {
-            console.error("Erro:", error);
-        }
+    try {
+      const response = await fetch('/addProduct', { method: 'POST', body: formData });
+      if (response.ok) {
+        showToast('Produto cadastrado com sucesso!');
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showToast('Erro ao cadastrar produto.', 'error');
+      }
+    } catch (err) {
+      showToast('Erro de conexão.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar produto';
     }
+  }
 </script>
-
 </body>
 </html>

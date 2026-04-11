@@ -31,7 +31,7 @@ db.serialize(() => {
     CREATE TABLE IF NOT EXISTS lojasInfo
     (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nomeLoja TEXT UNIQUE,
+      idLoja TEXT UNIQUE,
       logo TEXT,
       user TEXT NOT NULL,
       password TEXT NOT NULL,
@@ -45,7 +45,7 @@ db.serialize(() => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       numero INTEGER UNIQUE,
       status TEXT,
-      lojaId INTEGER NOT NULL,
+      idLoja TEXT NOT NULL,
       qty INTEGER
     )
   `)
@@ -58,7 +58,7 @@ db.serialize(() => {
       extras TEXT,
       descricao TEXT NOT NULL,
       categoria TEXT,
-      lojaId  INTEGER NOT NULL,
+      idLoja  TEXT NOT NULL,
       preco REAL
     )
   `)
@@ -70,7 +70,7 @@ db.serialize(() => {
       produto_id INTEGER,
       quantidade INTEGER NOT NULL CHECK (quantidade >= 0),
       desc TEXT,
-      lojaId INTEGER NOT NULL,
+      idLoja TEXT NOT NULL,
       status TEXT,
       hora TEXT
     )
@@ -91,16 +91,20 @@ db.serialize(() => {
 
 /* Armazenar as logos e imagens */
 const storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    const idLoja = req.body.idLoja || 'geral';
+    const pasta = `uploads/${idLoja}`;
 
-destination: function(req,file,cb){
-cb(null,"uploads/")
-},
+    // Cria a pasta se não existir
+    const fs = require('fs');
+    fs.mkdirSync(pasta, { recursive: true });
 
-filename: function(req,file,cb){
-cb(null, Date.now() + "-" + file.originalname)
-}
-
-})
+    cb(null, pasta);
+  },
+  filename: function(req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
 
 const upload = multer({storage:storage})
 
@@ -138,7 +142,7 @@ function checkRole(...roles) {
 
 // Verificar usuario
 app.get('/dashboard', verifyToken, (req, res) => {
-  return res.status(200).json({ msg: `Olá, ${req.user.role}`, role: `${req.user.role}` });
+  return res.status(200).json({ msg: `Olá, ${req.user.nome}`, role: `${req.user.role}`, idLoja: `${req.user.idLoja}` });
 });
 
 //Registro
@@ -163,9 +167,9 @@ app.post('/login', async (req, res) => {
       if (!valid) return res.status(401).json({ message: 'Verifique os campos' });
 
       const token = jwt.sign(
-        { id: row.id, role: row.role },
+        { id: row.id, nome: row.user , role: row.role, idLoja: row.idLoja},
         process.env.JWT_SECRET,
-        { expiresIn: '8h' }
+        { expiresIn: '9h' }
       );
 
       res.cookie('token', token, {
@@ -190,21 +194,27 @@ app.post('/register', async (req,res) =>{
   const idLojaNorm = idLoja.trim().toLowerCase();
 
   console.log(nome,email,idLoja,passLoja,senha)
-
-  try{
-    const hashedpassword = await bcrypt.hash(senha,saltRounds)
-    const hashedLojaPassword = await bcrypt.hash(passLoja,saltRounds)
-    const query = "INSERT INTO usuarios (user,password,email,idLoja,passLoja) VALUES (?,?,?,?,?)"
-    db.run(query,[nomeNorm,hashedpassword,emailNorm,idLojaNorm,hashedLojaPassword], (err,result) =>{
-      if(err){
-        return res.status(400).json({message:"Erro ao registrar usuario" + err.message})
-      }
-      return res.status(200).json({message: "Exito ao criar usuario na loja " + idLoja})
-    })
-  }
-  catch(err){
-    return res.status(400).json({message:"Erro ao registrar usuario " + err.message} )
-  }
+  db.get("SELECT password FROM lojasInfo WHERE idLoja = ?",[idLojaNorm], async (err,result) =>{
+    if(err){
+      res.status(402).json({message:  "Senha ou IDLoja Não Conferem !! "})
+    }
+    const isValid = await bcrypt.compare(passLoja, result.password)
+    if(isValid){
+        try{
+          const hashedpassword = await bcrypt.hash(senha,saltRounds)
+          const query = "INSERT INTO usuarios (user,password,email,idLoja,passLoja) VALUES (?,?,?,?,?)"
+          db.run(query,[nomeNorm,hashedpassword,emailNorm,idLojaNorm,result.password], (err,result) =>{
+            if(err){
+              return res.status(400).json({message:"Erro ao registrar usuario" + err.message})
+            }
+            return res.status(200).json({message: "Exito ao criar usuario na loja " + idLoja})
+          })
+        }
+        catch(err){
+          return res.status(400).json({message:"Erro ao registrar usuario " + err.message} )
+        }
+    }
+  })
 }) 
 
 
@@ -289,7 +299,7 @@ async function dispararImpressao(mesa_id, itens) {
 /* Imprimir dados */
 
 app.post("/add-multi-products", (req, res) => {
-    const { mesa_id, itens } = req.body;
+    const { mesa_id, itens,idLoja} = req.body;
     console.log("Body: " , req.body)
 
     if (!itens || itens.length === 0) {
@@ -494,13 +504,13 @@ app.listen(3000, () => {
 
 /* Adicionar Produto ao Banco de Dados */
 app.post("/addProduct", upload.single('imagem'), (req, res) => {
-    const { nome, preco,descricao, categoria, extras } = req.body;
-    const imagemPath = req.file ? req.file.filename : null;
+    const { nome, preco,descricao, categoria, extras, idLoja} = req.body;
+    const imagemPath = req.file ? `${idLoja}/${req.file.filename}` : null;
 
     const listaExtras = JSON.parse(extras); 
 
-    const sql = "INSERT INTO produtos (nome, preco,descricao, categoria, img, extras) VALUES (?, ?, ? , ?, ?, ?)";
-    db.run(sql, [nome, preco,descricao, categoria, imagemPath, extras], (err) => {
+    const sql = "INSERT INTO produtos (nome, preco,descricao, categoria, img, extras,idLoja) VALUES (?, ?, ? , ?, ?, ?,?)";
+    db.run(sql, [nome, preco,descricao, categoria, imagemPath, extras, idLoja], (err) => {
         if (err) return res.status(500).send(err.message);
         res.send("Sucesso!");
     });
@@ -660,9 +670,11 @@ if(row){
 console.log("Mesa já existe:", i)
 }else{
 
+
+
 db.run(
-"INSERT INTO mesas(numero,status) VALUES (?,?)",
-[i,"livre"],
+"INSERT INTO mesas(numero,status,idLoja) VALUES (?,?,?)",
+[i,"livre",req.body.idLoja],
 function(err){
 
 if(err){

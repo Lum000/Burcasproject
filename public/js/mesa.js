@@ -1,4 +1,25 @@
+let isAdmin = false;
 
+
+async function isadmin(){
+    const req = await fetch('/dashboard')
+    const res = await req.json()
+
+    if(res.role === 'admin'){isAdmin = true}
+    togleAdmin()
+}
+
+function togleAdmin(){
+    const btn_remover = document.querySelectorAll('.btn_remover')
+    if(isAdmin){
+        adminpanel.forEach((item) =>{
+            item.style.display = 'block';
+        })
+    }
+    adminpanel.forEach((item) =>{
+        item.style.display = 'none';
+    })
+}
 
 
 function toggleMenu(){
@@ -22,42 +43,7 @@ function showToast(){
     },1500)
 
 }
-function showAdminModal(product_id,mesa_id) {
-    document.getElementById("adminModal").style.display = "flex";
-    document.getElementById("adminPassword").value = ""; // Limpa a senha
-    document.getElementById("adminError").style.display = "none"; // Limpa erro
-    const button = document.getElementById('confirmarSenha')
-    button.addEventListener('click', async function(){
-        const senhaInput = document.getElementById("adminPassword").value;
-        const erro = document.getElementById("adminError");
-        
-        const SENHA_MESTRA = "1234"; // Defina sua senha aqui
 
-        if (senhaInput === SENHA_MESTRA) {
-            closeAdminModal();
-            deletarItem(product_id,mesa_id)
-            
-        } else {
-            erro.style.display = "block";
-            // Efeito de balançar o input (opcional)
-            document.getElementById("adminPassword").style.borderColor = "#e74c3c";
-        }
-    })
-}
-
-// Fecha o modal
-function closeAdminModal() {
-    document.getElementById("adminModal").style.display = "none";
-}
-
-
-// Fecha se clicar fora do box
-window.onclick = function(event) {
-    const modal = document.getElementById("adminModal");
-    if (event.target == modal) {
-        closeAdminModal();
-    }
-}
 
 async function getProducts(id, mesa) {
     const res = await fetch(`mesa/${mesa}/products/${id}`);
@@ -107,7 +93,7 @@ async function getProducts(id, mesa) {
                     <span class="qtd-numero">${item.quantidade}</span>
                     <button class="btn-qtd" onclick='maisUm(${dados.id}, ${item.mesa_id})'>+</button>
                 </div>
-                <button class="btn-remover" onclick='showAdminModal(${dados.id}, ${item.mesa_id})'>🗑️</button>
+                <button class="btn_remover" onclick='deletarItem(${dados.id}, ${item.mesa_id})'>🗑️</button>
             </div>
         `;
         listaItens.appendChild(div);
