@@ -31,6 +31,7 @@ db.serialize(() => {
     CREATE TABLE IF NOT EXISTS lojasInfo
     (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nomeLoja TEXT UNIQUE,
       idLoja TEXT UNIQUE,
       logo TEXT,
       user TEXT NOT NULL,
@@ -70,6 +71,7 @@ db.serialize(() => {
       produto_id INTEGER,
       quantidade INTEGER NOT NULL CHECK (quantidade >= 0),
       desc TEXT,
+      extras TEXT,
       idLoja TEXT NOT NULL,
       status TEXT,
       hora TEXT
@@ -92,12 +94,11 @@ db.serialize(() => {
 /* Armazenar as logos e imagens */
 const storage = multer.diskStorage({
   destination: function(req, file, cb) {
-    const idLoja = req.body.idLoja || 'geral';
-    const pasta = `uploads/${idLoja}`;
+    const idLoja = req.user?.idLoja || 'geral';
+    const pasta  = path.join('uploads', String(idLoja));
 
-    // Cria a pasta se não existir
     const fs = require('fs');
-    fs.mkdirSync(pasta, { recursive: true });
+    fs.mkdirSync(pasta, { recursive: true }); // cria a pasta se não existir
 
     cb(null, pasta);
   },
@@ -260,9 +261,12 @@ async function dispararImpressao(mesa_id, itens) {
         printer.alignCenter();
         printer.bold(true);
         printer.println("NOVO PEDIDO - COZINHA");
+        printer.setTextSize(2,2);
         printer.println(`MESA: ${mesa_id}`);
+        printer.setTextSize(1,1);
         printer.bold(false);
         printer.println("--------------------------------");
+        printer.setTextSize(2,2);
 
         itens.forEach(item => {
           const nomeSeguro = (item.nome && typeof item.nome === 'string') ? item.nome : "PRODUTO";
@@ -271,13 +275,19 @@ async function dispararImpressao(mesa_id, itens) {
           const qtdBase = `x${item.quantidade || 1}`.padStart(6);
           
           printer.println(nomeBase + qtdBase);
+          console.log("Extras = " + item.extras)
+          console.log("Descrição = " + item.obs)
 
           if (item.desc && typeof item.desc === 'string') {
-              const obs = item.desc.trim().toUpperCase();
+              const obs = item.obs.trim().toUpperCase();
+              const extras = item.extras.trim().toUpperCase();
               if (obs !== "") {
+                  printer.setTextSize(2,2);
+                  printer.println(` Extras:  ${extras}`);
                   printer.println(`  >> OBS: ${obs}`);
               }
           }
+          printer.setTextSize(1,1);
 
           printer.println("-".repeat(42)); 
       });
@@ -296,10 +306,15 @@ async function dispararImpressao(mesa_id, itens) {
         console.error("Erro na impressora física:", error);
     }
 }
+
+/*Alterar Dados da Loja */
+
+
 /* Imprimir dados */
 
-app.post("/add-multi-products", (req, res) => {
-    const { mesa_id, itens,idLoja} = req.body;
+app.post("/add-multi-products", verifyToken ,  (req, res) => {
+    const idLoja = req.user.idLoja;
+    const { mesa_id, itens} = req.body;
     console.log("Body: " , req.body)
 
     if (!itens || itens.length === 0) {
@@ -308,9 +323,9 @@ app.post("/add-multi-products", (req, res) => {
 
     db.serialize(() => {
         itens.forEach((item) => {
-            const sqlBusca = "SELECT id, quantidade FROM pedidos WHERE mesa_id = ? AND produto_id = ? AND status = 'aberto'";
+            const sqlBusca = "SELECT id, quantidade FROM pedidos WHERE mesa_id = ? AND produto_id = ? AND idLoja = ? AND status = 'aberto'";
             
-            db.get(sqlBusca, [mesa_id, item.id], (err, row) => {
+            db.get(sqlBusca, [mesa_id, item.id , idLoja], (err, row) => {
                 if (err) {
                     console.error("Erro na busca:", err);
                     return;
@@ -318,11 +333,10 @@ app.post("/add-multi-products", (req, res) => {
 
                 if (row) {
                     const novaQtd = row.quantidade + item.quantidade;
-                    db.run("UPDATE pedidos SET quantidade = ? WHERE id = ?", [novaQtd, row.id]);
+                    db.run("UPDATE pedidos SET quantidade = ? WHERE id = ? AND idLoja = ?", [novaQtd, row.id, idLoja]);
                 } else {
-                    const sqlInsert = "INSERT INTO pedidos (mesa_id, produto_id, quantidade,status, hora) VALUES (?, ?, ?, ? , ?)";
-                    console.log("item id = " + item.id + "item.quantidade = " + item.quantidade)
-                    db.run(sqlInsert, [mesa_id, item.id, item.quantidade,'aberto', new Date().toISOString()]);
+                    const sqlInsert = "INSERT INTO pedidos (mesa_id, produto_id,idLoja, quantidade,status,extras,desc, hora) VALUES (?, ?, ?, ?, ?, ?, ? , ?)";
+                    db.run(sqlInsert, [mesa_id, item.id,idLoja , item.quantidade,'aberto',item.extras,item.obs, new Date().toISOString()]);
                 }
             });
         });
@@ -503,17 +517,30 @@ app.listen(3000, () => {
 
 
 /* Adicionar Produto ao Banco de Dados */
-app.post("/addProduct", upload.single('imagem'), (req, res) => {
-    const { nome, preco,descricao, categoria, extras, idLoja} = req.body;
-    const imagemPath = req.file ? `${idLoja}/${req.file.filename}` : null;
+app.post("/addProduct", verifyToken, upload.single('imagem'), (req, res) => {
+  const { nome, preco, descricao, categoria, extras } = req.body;
+  const idLoja = req.user.idLoja;
 
-    const listaExtras = JSON.parse(extras); 
+  if (!nome || !preco || !categoria) {
+    return res.status(400).json({ message: 'Campos obrigatórios faltando' });
+  }
 
-    const sql = "INSERT INTO produtos (nome, preco,descricao, categoria, img, extras,idLoja) VALUES (?, ?, ? , ?, ?, ?,?)";
-    db.run(sql, [nome, preco,descricao, categoria, imagemPath, extras, idLoja], (err) => {
-        if (err) return res.status(500).send(err.message);
-        res.send("Sucesso!");
-    });
+  let extrasJSON = '[]';
+  try {
+    const parsed = JSON.parse(extras);
+    extrasJSON = JSON.stringify(parsed); 
+  } catch {
+    extrasJSON = '[]';
+  }
+
+  const imagemPath = req.file ? `${idLoja}/${req.file.filename}` : null;
+
+  const sql = "INSERT INTO produtos (nome, preco, descricao, categoria, img, extras, idLoja) VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+  db.run(sql, [nome, preco, descricao, categoria, imagemPath, extrasJSON, idLoja], function(err) {
+    if (err) return res.status(500).json({ message: 'Erro ao salvar: ' + err.message });
+    res.status(200).json({ message: 'Produto cadastrado!', id: this.lastID });
+  });
 });
 
 
@@ -542,6 +569,53 @@ app.get("/products/:category", async (req,res) =>{
         }
     })
 })
+
+
+// Listar todos os usuários (só admin)
+app.get('/admin/usuarios', verifyToken, checkRole('admin'), (req, res) => {
+  db.all('SELECT id, user, email, role, idLoja FROM usuarios', [], (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    res.json(rows);
+  });
+});
+
+// Criar usuário
+app.post('/admin/usuarios', verifyToken, checkRole('admin'), async (req, res) => {
+  const { user, email, role, idLoja, senha } = req.body;
+  if (!user || !email || !senha) return res.status(400).json({ message: 'Campos obrigatórios' });
+  const hash = await bcrypt.hash(senha, saltRounds);
+  db.run('INSERT INTO usuarios (user, email, password, role, idLoja) VALUES (?,?,?,?,?)',
+    [user.toLowerCase(), email.toLowerCase(), hash, role || 'user', idLoja],
+    function(err) {
+      if (err) return res.status(400).json({ message: err.message });
+      res.json({ ok: true, id: this.lastID });
+    }
+  );
+});
+
+// Editar usuário
+app.put('/admin/usuarios/:id', verifyToken, checkRole('admin'), async (req, res) => {
+  const { user, email, role, idLoja, senha } = req.body;
+  if (senha) {
+    const hash = await bcrypt.hash(senha, saltRounds);
+    db.run('UPDATE usuarios SET user=?, email=?, role=?, idLoja=?, password=? WHERE id=?',
+      [user, email, role, idLoja, hash, req.params.id],
+      (err) => err ? res.status(500).json({ message: err.message }) : res.json({ ok: true })
+    );
+  } else {
+    db.run('UPDATE usuarios SET user=?, email=?, role=?, idLoja=? WHERE id=?',
+      [user, email, role, idLoja, req.params.id],
+      (err) => err ? res.status(500).json({ message: err.message }) : res.json({ ok: true })
+    );
+  }
+});
+
+// Deletar usuário
+app.delete('/admin/usuarios/:id', verifyToken, checkRole('admin'), (req, res) => {
+  db.run('DELETE FROM usuarios WHERE id=?', [req.params.id],
+    (err) => err ? res.status(500).json({ message: err.message }) : res.json({ ok: true })
+  );
+});
 
 /*  Atualiza a quantidade do produto especifico daquela mesa */
 

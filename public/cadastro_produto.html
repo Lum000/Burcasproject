@@ -573,7 +573,9 @@
 
     try {
       const response = await fetch('/addProduct', { method: 'POST', body: formData });
+      console.log(await response.json())
       if (response.ok) {
+
         showToast('Produto cadastrado com sucesso!');
         setTimeout(() => location.reload(), 1500);
       } else {

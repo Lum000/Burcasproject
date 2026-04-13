@@ -153,6 +153,10 @@ header {
 
 /* ── CARD DA MESA ── */
 .mesa-card {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  justify-content: space-between;
   background: var(--card-bg);
   border-radius: var(--radius);
   padding: 24px;

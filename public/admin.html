@@ -1,65 +1,391 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-<title>Painel Admin</title>
-<link rel="stylesheet" href="css/admin.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="js/admin.js" defer></script>
 </head>
-
 <body>
 
-<div class="container">
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon">🍔</div>
+    <span>Admin</span>
+  </div>
 
-<h1>Painel Administrativo</h1>
+  <div class="sidebar-label">Painel</div>
+  <nav>
+    <button class="nav-item active" onclick="showPanel('visao-geral', this)">
+      <span class="icon">📊</span> Visão Geral
+    </button>
+    <button class="nav-item" onclick="showPanel('lanchonete', this)">
+      <span class="icon">🏪</span> Lanchonete
+    </button>
+    <button class="nav-item" onclick="showPanel('mesas', this)">
+      <span class="icon">🪑</span> Mesas
+    </button>
+    <button class="nav-item" onclick="showPanel('produtos', this)">
+      <span class="icon">🍔</span> Produtos
+    </button>
+    <button class="nav-item" onclick="showPanel('usuarios', this)">
+      <span class="icon">👥</span> Usuários
+    </button>
+  </nav>
 
-<section class="card">
+  <div class="sidebar-footer">
+    <a href="/">← Voltar ao sistema</a>
+  </div>
+</aside>
 
-<h2>Informações da Lanchonete</h2>
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <span class="topbar-title" id="topbar-title">Visão Geral</span>
+    <span class="topbar-badge" id="topbar-loja">Carregando...</span>
+  </div>
 
-<form id="formInfo">
+  <div class="content">
 
-<label>Nome da Lanchonete</label>
-<input type="text" id="nomeLoja" name="nomeLoja">
+    <!-- ── PAINEL: VISÃO GERAL ── -->
+    <div class="panel active" id="panel-visao-geral">
+      <div class="section-header">
+        <div>
+          <h2>Visão Geral</h2>
+          <p>Resumo do sistema</p>
+        </div>
+      </div>
 
-<label>Logo</label>
-<input type="file" id="logoInput" name="logo">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">🪑</div>
+          <div class="stat-value" id="stat-mesas">—</div>
+          <div class="stat-label">Mesas cadastradas</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🍔</div>
+          <div class="stat-value" id="stat-produtos">—</div>
+          <div class="stat-label">Produtos no cardápio</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🏪</div>
+          <div class="stat-value" id="stat-loja">—</div>
+          <div class="stat-label">Loja ativa</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="stat-usuarios">—</div>
+          <div class="stat-label">Usuários</div>
+        </div>
+      </div>
 
-<img id="previewLogo"/>
+      <div class="card">
+        <div class="card-title">Acesso rápido</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-outline" onclick="showPanel('lanchonete', null)">🏪 Editar lanchonete</button>
+          <button class="btn btn-outline" onclick="showPanel('mesas', null)">🪑 Configurar mesas</button>
+          <button class="btn btn-outline" onclick="showPanel('produtos', null)">🍔 Gerenciar produtos</button>
+          <button class="btn btn-outline" onclick="showPanel('usuarios', null)">👥 Gerenciar usuários</button>
+          <button class="btn btn-outline" onclick="window.location.href='/cadastro_produto.html'">➕ Novo produto</button>
+        </div>
+      </div>
+    </div>
 
-<button type="submit">Salvar Informações</button>
+    <!-- ── PAINEL: LANCHONETE ── -->
+    <div class="panel" id="panel-lanchonete">
+      <div class="section-header">
+        <div>
+          <h2>Lanchonete</h2>
+          <p>Nome, logo e informações gerais</p>
+        </div>
+      </div>
 
-</form>
+      <div class="card">
+        <div class="card-title">Logo</div>
+        <div class="logo-upload">
+          <div class="logo-preview" onclick="document.getElementById('logoInput').click()">
+            <img id="previewLogo" src="" alt="logo">
+            <div class="logo-preview-icon" id="logo-placeholder">🏪</div>
+          </div>
+          <div class="logo-upload-info">
+            <p>Clique na imagem para selecionar uma nova logo.</p>
+            <button class="btn btn-outline" onclick="document.getElementById('logoInput').click()">Escolher arquivo</button>
+          </div>
+        </div>
+        <input type="file" id="logoInput" accept="image/*" style="display:none" onchange="previewLogo()">
+      </div>
 
-</section>
+      <div class="card">
+        <div class="card-title">Informações</div>
+        <form id="formInfo">
+          <div class="field-row">
+            <div class="field">
+              <label>Nome da lanchonete</label>
+              <input type="text" id="nomeLoja" placeholder="Ex: Burcas Lanchonete">
+            </div>
+            <div class="field">
+              <label>ID da loja</label>
+              <input type="text" id="idLojaDisplay" disabled style="opacity:0.5;cursor:not-allowed">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Salvar informações</button>
+        </form>
+      </div>
+    </div>
 
+    <!-- ── PAINEL: MESAS ── -->
+    <div class="panel" id="panel-mesas">
+      <div class="section-header">
+        <div>
+          <h2>Mesas</h2>
+          <p>Configure a quantidade de mesas da lanchonete</p>
+        </div>
+      </div>
 
-<section class="card">
+      <div class="card">
+        <div class="card-title">Configuração</div>
+        <form id="formMesas" style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
+          <div class="field" style="flex:1;min-width:160px;margin:0">
+            <label>Quantidade de mesas</label>
+            <input type="number" id="qtdMesas" min="1" max="100" placeholder="Ex: 10" oninput="previewMesas()">
+          </div>
+          <button type="submit" class="btn btn-primary">Salvar mesas</button>
+        </form>
+      </div>
 
-<h2>Configuração de Mesas</h2>
+      <div class="card">
+        <div class="card-title">Preview</div>
+        <div class="mesas-preview" id="mesasContainer"></div>
+      </div>
+    </div>
 
-<form id="formMesas">
+    <!-- ── PAINEL: PRODUTOS ── -->
+    <div class="panel" id="panel-produtos">
+      <div class="section-header">
+        <div>
+          <h2>Produtos</h2>
+          <p>Gerencie o cardápio da lanchonete</p>
+        </div>
+        <button class="btn btn-primary" onclick="window.location.href='/cadastro_produto.html'">
+          ➕ Novo produto
+        </button>
+      </div>
 
-<label>Quantidade de mesas</label>
-<input type="number" id="qtdMesas" name="qtdMesas" min="1">
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="produtos-table">
+          <thead>
+            <tr>
+              <th style="width:60px"></th>
+              <th>Nome</th>
+              <th>Categoria</th>
+              <th>Preço</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="produtos-tbody">
+            <tr>
+              <td colspan="5" style="text-align:center;color:var(--texto-muted);padding:32px">
+                Carregando produtos...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-<button type="submit">Salvar Mesas</button>
+    <!-- ── PAINEL: USUÁRIOS ── -->
+    <div class="panel" id="panel-usuarios">
+      <div class="section-header">
+        <div>
+          <h2>Usuários</h2>
+          <p>Gerencie usuários, roles e acessos</p>
+        </div>
+        <button class="btn btn-primary" onclick="abrirModalNovoUsuario()">+ Novo usuário</button>
+      </div>
 
-</form>
+      <div class="stats-grid" style="margin-bottom:20px">
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="stat-total-usuarios">—</div>
+          <div class="stat-label">Total de usuários</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🛡️</div>
+          <div class="stat-value" id="stat-admins">—</div>
+          <div class="stat-label">Administradores</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">👤</div>
+          <div class="stat-value" id="stat-users-comuns">—</div>
+          <div class="stat-label">Usuários comuns</div>
+        </div>
+      </div>
 
-</section>
+      <div class="toolbar">
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" id="search-usuarios" placeholder="Buscar por nome ou email..." oninput="filtrarUsuarios()">
+        </div>
+        <div class="toolbar-right">
+          <select id="filtro-role" onchange="filtrarUsuarios()" class="filter-select">
+            <option value="">Todos os roles</option>
+            <option value="admin">Admin</option>
+            <option value="user">User</option>
+            <option value="cozinha">Cozinha</option>
+            <option value="caixa">Caixa</option>
+          </select>
+        </div>
+      </div>
 
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="produtos-table">
+          <thead>
+            <tr>
+              <th>Usuário</th>
+              <th>Email</th>
+              <th>Loja</th>
+              <th>Role</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="usuarios-tbody">
+            <tr>
+              <td colspan="5" style="text-align:center;color:var(--texto-muted);padding:32px">
+                Carregando usuários...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-<section class="card">
+  </div>
+</main>
 
-<h2>Preview das Mesas</h2>
-
-<div id="mesasContainer"></div>
-
-</section>
-
+<!-- MODAL EDITAR PRODUTO -->
+<div class="modal-overlay" id="modal-produto">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Editar Produto</h3>
+      <button class="modal-close" onclick="fecharModal('modal-produto')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id">
+      <div class="field-row">
+        <div class="field">
+          <label>Nome</label>
+          <input id="edit-nome" placeholder="Nome do produto">
+        </div>
+        <div class="field">
+          <label>Preço (R$)</label>
+          <input id="edit-preco" type="number" step="0.01" placeholder="0,00">
+        </div>
+      </div>
+      <div class="field">
+        <label>Descrição</label>
+        <textarea id="edit-descricao" placeholder="Ingredientes, detalhes..."></textarea>
+      </div>
+      <div class="field">
+        <label>Categoria</label>
+        <select id="edit-categoria">
+          <option value="lanches">🍔 Lanches</option>
+          <option value="porcoes">🍟 Porções</option>
+          <option value="bebidas">🥤 Bebidas</option>
+          <option value="sobremesas">🍰 Sobremesas</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Extras</label>
+        <div id="edit-extras-lista"></div>
+        <button type="button" class="btn-add-extra" onclick="adicionarExtraModal()">+ Adicionar extra</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="fecharModal('modal-produto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEdicao()">Salvar</button>
+    </div>
+  </div>
 </div>
 
-<script src="js/admin.js"></script>
+<!-- MODAL EDITAR / CRIAR USUÁRIO -->
+<div class="modal-overlay" id="modal-usuario">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-usuario-titulo">Editar Usuário</h3>
+      <button class="modal-close" onclick="fecharModal('modal-usuario')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-usuario-id">
+      <div class="field-row">
+        <div class="field">
+          <label>Nome de usuário</label>
+          <input id="edit-user" placeholder="Ex: joao_silva">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input id="edit-email" type="email" placeholder="email@exemplo.com">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Role</label>
+          <select id="edit-role">
+            <option value="user">👤 User</option>
+            <option value="admin">🛡️ Admin</option>
+            <option value="cozinha">👨‍🍳 Cozinha</option>
+            <option value="caixa">💰 Caixa</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>ID da Loja</label>
+          <input id="edit-usuario-idLoja" placeholder="Ex: burcas">
+        </div>
+      </div>
+      <div class="field">
+        <label>
+          Nova senha
+          <span style="font-size:11px;color:var(--texto-hint);text-transform:none;font-weight:400;letter-spacing:0">
+            (deixe em branco para manter)
+          </span>
+        </label>
+        <input id="edit-senha" type="password" placeholder="••••••••">
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn btn-danger" id="btn-deletar-usuario" onclick="confirmarDeleteUsuario()">🗑 Deletar</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-outline" onclick="fecharModal('modal-usuario')">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarUsuario()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR DELETE USUÁRIO -->
+<div class="modal-overlay" id="modal-confirm-usuario">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-header" style="background:var(--vermelho)">
+      <h3 style="color:white;font-family:'Bebas Neue',sans-serif;letter-spacing:2px;font-weight:400">Confirmar exclusão</h3>
+      <button class="modal-close" onclick="fecharModal('modal-confirm-usuario')" style="color:white">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center;padding:32px 24px">
+      <div style="font-size:36px;margin-bottom:16px">⚠️</div>
+      <p style="color:var(--texto);font-size:15px;margin-bottom:8px">Tem certeza que deseja deletar</p>
+      <p style="color:var(--amarelo);font-weight:600;font-size:16px" id="confirm-usuario-nome">usuário?</p>
+      <p style="color:var(--texto-muted);font-size:13px;margin-top:8px">Essa ação não pode ser desfeita.</p>
+    </div>
+    <div class="modal-footer" style="justify-content:center;gap:12px">
+      <button class="btn btn-outline" onclick="fecharModal('modal-confirm-usuario')">Cancelar</button>
+      <button class="btn" onclick="executarDeleteUsuario()" style="background:var(--vermelho);color:white;border:none;padding:10px 20px;border-radius:9px;font-weight:700;font-family:'DM Sans',sans-serif;font-size:13px;text-transform:uppercase;cursor:pointer">Deletar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 </body>
 </html>

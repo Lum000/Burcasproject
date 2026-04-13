@@ -4,6 +4,11 @@ let isAdmin = false;
 async function isadmin(){
     const req = await fetch('/dashboard')
     const res = await req.json()
+    if(res.error){
+        window.location.href = "login.html"
+        console.log('rodando')
+    }
+    console.log(res)
 
     if(res.role === 'admin'){isAdmin = true}
     togleAdmin()
@@ -20,6 +25,8 @@ function togleAdmin(){
         item.style.display = 'none';
     })
 }
+
+window.onload = isadmin;
 
 
 function toggleMenu(){
@@ -183,9 +190,9 @@ async function showCategory(category){
     
     renderProducts(res_body)
 }
-async function addProdutoMesa(product_id,mesa_id) {
+async function addProdutoMesa(product_id,mesa_id,idLoja) {
     try{
-        await fetch('/addproduct/' + mesa_id + '/' + product_id)
+        await fetch('/add-multi-products' )
         showToast()
         closeAlert()
         verifyMesa()
@@ -280,7 +287,7 @@ async function confirmarPedido(mesa_id) {
             itens: carrinhoTemporario
         })
     });
-
+    console.log(res)
     if (res.ok) {
         alert("Pedido enviado!");
         carrinhoTemporario = []; // Limpa o carrinho após o sucesso
