@@ -69,11 +69,23 @@ function previewLogo() {
 }
 
 // ── FORM INFO ──
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('formInfo').addEventListener('submit', async (e) => {
     e.preventDefault();
     const nomeLoja = document.getElementById('nomeLoja').value
-    showToast('Informações salvas!');
+    const logo = document.getElementById('logoInput').value
+    const req = await fetch('/alterLoja',{
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'include',
+      body: JSON.stringify({nomeLoja: nomeLoja, logoLoja: logo})      
+    })
+    const res = await req.json()
+    if (req.ok) {
+      showToast(res.success || res.message);
+    } else {
+      showToast(res.error || 'Erro ao salvar.', 'red');
+    }
   });
 
   // ── FORM MESAS ──

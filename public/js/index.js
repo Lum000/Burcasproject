@@ -1,6 +1,27 @@
 let isAdmin = false;
 
 
+
+async function aplicarNomeeLogo(){
+    try{
+        const req = await fetch('/lojasInfo')
+        const res = await req.json()
+        if(res[0].nomeLoja && !res[0].logo){
+            const nome = document.getElementById("nomeLoja")
+            nome.innerHTML =  '🍔 ' + res[0].nomeLoja
+            carregarMesas()
+        }
+        //Falta finalizar essa parte da logo !!!!!!!!
+        else if(res[0].nomeLoja && res[0].logo){
+            const nome = document.getElementById("nomeLoja")
+            nome.innerHTML =  '🍔 ' + res[0].nomeLoja
+            carregarMesas()
+        }
+    }
+    catch(error){
+        console.log(error)
+    }
+}
 async function aplicarPermissoes() {
     try{
         const req = await fetch('/dashboard')
@@ -10,6 +31,7 @@ async function aplicarPermissoes() {
         }
         isAdmin = res.role
         togleAdmin()
+        aplicarNomeeLogo()
     }
     catch(err){
         console.log(err)
@@ -94,4 +116,3 @@ sidebar.classList.toggle("active")
 
 }
 
-carregarMesas()

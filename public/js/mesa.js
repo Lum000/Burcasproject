@@ -1,5 +1,51 @@
 let isAdmin = false;
 
+async function mostrarSkeleton(quantidade = 3) {
+  const divPedidos = document.querySelector('.pedidos');
+  if (!divPedidos) return;
+
+  divPedidos.innerHTML = '<h2>Pedidos</h2>';
+
+  const listaItens = document.createElement('div');
+  listaItens.className = 'lista-itens-scroll';
+  divPedidos.appendChild(listaItens);
+
+  for (let i = 0; i < quantidade; i++) {
+    await new Promise(r => setTimeout(r, 150)); // ← 150ms entre cada um
+
+    const div = document.createElement('div');
+    div.className = 'skeleton';
+    div.style.opacity = '0';
+    div.style.transform = 'translateY(8px)';
+    div.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+    div.innerHTML = `
+      <div class="skeleton-img"></div>
+      <div class="skeleton-info">
+        <div class="skeleton-line lg"></div>
+        <div class="skeleton-line md"></div>
+      </div>
+      <div class="skeleton-controls">
+        <div class="skeleton-circle"></div>
+        <div class="skeleton-num"></div>
+        <div class="skeleton-circle"></div>
+      </div>
+      <div class="skeleton-circle"></div>
+    `;
+    listaItens.appendChild(div);
+
+    // força o reflow para a animação funcionar
+    requestAnimationFrame(() => {
+      div.style.opacity = '1';
+      div.style.transform = 'translateY(0)';
+    });
+  }
+}
+
+function esconderSkeleton() {
+  const divPedidos = document.querySelector('.pedidos');
+  divPedidos.innerHTML = '';
+}
+
 
 async function isadmin(){
     const req = await fetch('/dashboard')
@@ -17,11 +63,11 @@ async function isadmin(){
 function togleAdmin(){
     const btn_remover = document.querySelectorAll('.btn_remover')
     if(isAdmin){
-        adminpanel.forEach((item) =>{
+        btn_remover.forEach((item) =>{
             item.style.display = 'block';
         })
     }
-    adminpanel.forEach((item) =>{
+    btn_remover.forEach((item) =>{
         item.style.display = 'none';
     })
 }
@@ -39,9 +85,20 @@ sidebar.classList.toggle("active")
 
 const urlParams = new URLSearchParams(window.location.search);
 const mesa = urlParams.get('mesa');
-function showToast(){
+function showToast(message,error){
 
     const toast = document.getElementById("toastAdd")
+    if(message){
+        if(error){
+            document.getElementById("toastMessage").innerHTML = message;
+            document.getElementById("toastMessage").style.color = error;
+        }
+        else{
+            document.getElementById("toastMessage").innerHTML = message;
+            document.getElementById("toastMessage").style.color = "green";
+        }
+
+    }
 
     toast.classList.add("show")
 
@@ -53,54 +110,58 @@ function showToast(){
 
 
 async function getProducts(id, mesa) {
+    await mostrarSkeleton(4)
+
     const res = await fetch(`mesa/${mesa}/products/${id}`);
     const mesa_products = await res.json();
-    const divPedidos = document.querySelector(".pedidos");
-    
-    // Limpamos a div logo no início
-    divPedidos.innerHTML = "";
 
-    // Caso a mesa esteja vazia
+
+    const divPedidos = document.querySelector('.pedidos');
+    divPedidos.innerHTML = '';
+
     if (!Array.isArray(mesa_products) || mesa_products.length === 0) {
         divPedidos.innerHTML = `
-            <div class="sem-produtos">
-                <p>MESA LIVRE</p>
-                <button class="btn-adicionar" onclick="openAdd()">
-                    + Adicionar Produto
-                </button>
-            </div>`;
-        return; 
+        <div class="sem-produtos">
+            <p>MESA LIVRE</p>
+            <button class="btn-adicionar" onclick="openAdd()">+ Adicionar Produto</button>
+        </div>`;
+        return;
     }
 
-    // Caso tenha produtos
-    divPedidos.innerHTML = "<h2>Pedidos</h2>";
+    divPedidos.innerHTML = '<h2>Pedidos</h2>';
     let totalGeral = 0;
 
-    const listaItens = document.createElement("div");
-    listaItens.className = "lista-itens-scroll";
+    const listaItens = document.createElement('div');
+    listaItens.className = 'lista-itens-scroll';
     divPedidos.appendChild(listaItens);
-
-    // Loop pelos itens
     for (const item of mesa_products) {
         const dadosreq = await fetch("/getprodutobody/" + item.produto_id);
         const dados = await dadosreq.json();
+        const descObs  = await fetch("/getExtras/" + item.id);
+        const dadosObs = await descObs.json();
 
-        totalGeral += dados.preco * item.quantidade;
+        const extrasTexto = dadosObs.extras || '';
+        const obsTexto    = dadosObs.desc   || '';
+        const precoExtra = dadosObs.preco || '';
 
+        totalGeral += precoExtra * item.quantidade;
+        
         const div = document.createElement("div");
         div.innerHTML = ` 
             <div class="pedido-item">
                 <div class="item-img"><img src='/uploads/${dados.img}' style="width:50px; border-radius:10px;"></div>
                 <div class="item-detalhes">
                     <span class="item-nome">${dados.nome}</span>
-                    <span class="item-preco">R$ ${dados.preco.toFixed(2)}</span>
+                    <span class="item-preco">R$ ${precoExtra.toFixed(2)}</span>
+                    ${extrasTexto ? `<span class="item-desc">Extras: ${extrasTexto}</span>` : ''}
+                    ${obsTexto    ? `<span class="item-desc">Obs: ${obsTexto}</span>`       : ''}
                 </div>
                 <div class="item-controles">
-                    <button class="btn-qtd" onclick='menosUm(${dados.id}, ${item.mesa_id})'>-</button>
+                    <button class="btn-qtd" onclick='menosUm(${dadosObs.id}, ${item.mesa_id})'>-</button>
                     <span class="qtd-numero">${item.quantidade}</span>
-                    <button class="btn-qtd" onclick='maisUm(${dados.id}, ${item.mesa_id})'>+</button>
+                    <button class="btn-qtd" onclick='maisUm(${dadosObs.id}, ${item.mesa_id})'>+</button>
                 </div>
-                <button class="btn_remover" onclick='deletarItem(${dados.id}, ${item.mesa_id})'>🗑️</button>
+                <button class="btn_remover" onclick='deletarItem(${dadosObs.id}, ${item.mesa_id})'>🗑️</button>
             </div>
         `;
         listaItens.appendChild(div);
@@ -162,7 +223,17 @@ async function verifyMesa(){
     const mesasinfo = await res.json()
     document.getElementById("mesaStatus").innerHTML = "Status: " + mesasinfo[0].status.toUpperCase()
     document.getElementById("mesaNumero").innerHTML = "Mesa " + mesa
-    getProducts(mesasinfo[0].id,mesa)
+    mostrarSkeleton(4)
+    await getProducts(mesasinfo[0].id,mesa)
+}
+
+async function getMesaId(){
+    const res = await fetch ("mesa/" + mesa)
+    const mesasinfo = await res.json()
+    document.getElementById("mesaStatus").innerHTML = "Status: " + mesasinfo[0].status.toUpperCase()
+    document.getElementById("mesaNumero").innerHTML = "Mesa " + mesa
+    const mesaId = mesasinfo[0].id
+    return mesaId;
 }
 
 async function openAdd() {
@@ -171,6 +242,58 @@ async function openAdd() {
 }
 function closeAlert(){
     document.getElementById("productAlert").style.display = "none"
+}
+
+
+/*Modal de Alterar Mesa */
+
+// Abre o modal
+document.getElementById('alterTable').addEventListener('click', () => {
+  const mesaAtual = document.getElementById('mesaNumero').textContent;
+  document.getElementById('mesaAtualLabel').textContent = mesaAtual;
+  document.getElementById('inputNovoNumeroMesa').value = '';
+  document.getElementById('modalAlterarMesa').style.display = 'flex';
+});
+
+function fecharModalMesa() {
+  document.getElementById('modalAlterarMesa').style.display = 'none';
+}
+
+async function confirmarAlterarMesa() {
+  const novoNumero = document.getElementById('inputNovoNumeroMesa').value;
+  const mesaId =  await getMesaId();
+  if (!novoNumero) {
+    document.getElementById('inputNovoNumeroMesa').style.borderColor = 'var(--vermelho)';
+    return;
+  }
+
+  try {
+    const res = await fetch(`/mesa/alterar/${mesaId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ antigoNumero: parseInt(mesa),novoNumero: parseInt(novoNumero) })
+    });
+
+    const data = await res.json();
+    console.log(data)
+
+
+    if (data.success) {
+        fecharModalMesa();
+        showToast(data.message)
+        setTimeout(() => {
+            window.location.href = "/mesa.html?mesa=" + novoNumero;
+            verifyMesa()
+        }, 1500);
+    }
+    else{
+      fecharModalMesa();
+      showToast(data.message,"red")
+    }
+  } catch {
+    alert('Erro de conexão.');
+  }
 }
 
 async function showCategory(category){
@@ -189,17 +312,6 @@ async function showCategory(category){
     const res_body = await res.json()
     
     renderProducts(res_body)
-}
-async function addProdutoMesa(product_id,mesa_id,idLoja) {
-    try{
-        await fetch('/add-multi-products' )
-        showToast()
-        closeAlert()
-        verifyMesa()
-    }
-    catch(err){
-        console.log("Erro ao adicionar produto " + err)
-    }
 }
 async function pegaridMesa(){
     const mesa_res = await fetch ("mesa/" + mesa)
@@ -273,6 +385,7 @@ function renderPedidos(lista){
 
 let carrinhoTemporario = [];
 let listaExtras = [];
+let precoFinalComExtras;
 
 /*Multiplo envio de produtos */
 
@@ -284,15 +397,18 @@ async function confirmarPedido(mesa_id) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             mesa_id: mesa_id,
+            mesa_numero: mesa,
+            precoFinal: precoFinalComExtras,
             itens: carrinhoTemporario
         })
     });
-    console.log(res)
+    console.log(res.ok)
     if (res.ok) {
-        alert("Pedido enviado!");
-        carrinhoTemporario = []; // Limpa o carrinho após o sucesso
-        verifyMesa(); // Atualiza a tela da mesa
-        closeAlert()
+        showToast("Pedido enviado !");
+        carrinhoTemporario = [];
+        renderizarCarrinhoTemporario();
+        verifyMesa();
+        closeAlert();
     }
 }
 
@@ -389,7 +505,7 @@ function desmarcarTudo() {
 }
 
 /**Open Modal de produto */
-
+let valorTotalcomExtras = 0;
 function openProdModal(botao) {
     const id = botao.dataset.id;
     const nome = botao.dataset.nome;
@@ -405,7 +521,7 @@ function openProdModal(botao) {
     }
 
     // RESET DE ESTADO DO MODAL
-    listaExtras = []; // Limpa a lista global de nomes de extras
+    listaExtras = []; 
     let valorExtrasAcumulado = 0;
     document.getElementById("modalObs").value = ""; // Limpa observação anterior
 
@@ -444,17 +560,18 @@ function openProdModal(botao) {
 
             // Atualiza o preço exibido no modal em tempo real
             const totalModal = precoBase + valorExtrasAcumulado;
+            valorTotalcomExtras = totalModal;
+
             document.getElementById("modalPreco").innerText = totalModal.toFixed(2);
         });
 
         extradiv.appendChild(label);
     });
 
-    // CONFIGURAÇÃO DO BOTÃO SALVAR (IMPORTANTE: .onclick substitui o evento anterior)
     const button = document.getElementById("addprod");
     button.onclick = function() {
         const obs = document.getElementById('modalObs').value.trim();
-        const precoFinalComExtras = precoBase + valorExtrasAcumulado;
+        precoFinalComExtras = precoBase + valorExtrasAcumulado;
         
         // Passamos a lista de extras atual
         adicionarAoCarrinho(id, nome, precoFinalComExtras, obs, [...listaExtras]);

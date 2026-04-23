@@ -116,7 +116,7 @@
 
 </div>
 <div id="toastAdd" class="toast">
-✔ Produto adicionado
+<span id="toastMessage"> ✔ Produto adicionado </span>
 </div>
 
 
@@ -194,6 +194,53 @@
 
   </div>
 
+</div>
+
+<!-- MODAL ALTERAR MESA -->
+<div id="modalAlterarMesa" class="alert-overlay">
+  <div class="modal-content" style="width:340px">
+    <span class="close" onclick="fecharModalMesa()">✕</span>
+
+    <div style="background:var(--amarelo);padding:20px;text-align:center">
+      <h2 style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:#000;font-weight:400">
+        Alterar Mesa
+      </h2>
+    </div>
+
+    <div class="modal-body">
+      <p style="color:var(--texto-muted);font-size:13px;margin-bottom:16px">
+        Mesa atual: <strong id="mesaAtualLabel" style="color:var(--amarelo)">—</strong>
+      </p>
+
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px">
+        <label style="font-size:12px;font-weight:600;color:var(--texto-muted);text-transform:uppercase;letter-spacing:0.5px">
+          Novo número da mesa
+        </label>
+        <input
+          id="inputNovoNumeroMesa"
+          type="number"
+          min="1"
+          placeholder="Ex: 5"
+          style="padding:11px 14px;background:var(--card-bg2);border:1.5px solid var(--card-border);border-radius:var(--radius-sm);color:var(--texto);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color var(--transition)"
+          onfocus="this.style.borderColor='var(--amarelo)'"
+          onblur="this.style.borderColor='var(--card-border)'"
+        >
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button
+          onclick="fecharModalMesa()"
+          style="flex:1;padding:11px;background:transparent;border:1.5px solid var(--card-border);border-radius:var(--radius-sm);color:var(--texto-muted);font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;text-transform:uppercase;cursor:pointer">
+          Cancelar
+        </button>
+        <button
+          onclick="confirmarAlterarMesa()"
+          style="flex:2;padding:11px;background:var(--amarelo);border:none;border-radius:var(--radius-sm);color:#000;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer">
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 </body>

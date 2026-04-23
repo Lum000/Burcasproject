@@ -150,6 +150,18 @@ header {
   margin: 32px auto;
   padding: 0 24px;
 }
+/*Alterar Numero de Mesa */
+.mesa-alterar{
+  color: var(--preto);
+  width: 15%;
+  border-radius: var(--radius);
+  border: solid var(--card-border);
+  background-color: var(--amarelo);
+  font-size: 18px;
+  box-shadow: 0 4px 16px rgba(255, 212, 0, 0.2);
+  font-family: 'Bebas Neue', sans-serif;
+}
+
 
 /* ── CARD DA MESA ── */
 .mesa-card {
@@ -239,6 +251,11 @@ header {
   font-size: 13px;
   font-weight: 600;
   color: var(--verde);
+}
+.item-desc{
+  font-size: 10px;
+  font-weight: 500;
+  color:  var(--texto);
 }
 
 /* ── CONTROLES DE QUANTIDADE ── */
@@ -1018,8 +1035,16 @@ textarea:focus { border-color: var(--amarelo); }
 
 /* ── RESPONSIVO ── */
 @media (max-width: 768px) {
+  .sidebar{
+    background-color: var(--card-bg);
+  }
   .nav { display: none; }
   .menu-btn { display: block; }
+
+  .mesa-alterar{
+    width: fit-content;
+    padding: 5px;
+  }
 
   .modal-layout { flex-direction: column; }
 
@@ -1043,12 +1068,95 @@ textarea:focus { border-color: var(--amarelo); }
   .mesa-info { padding: 0 16px; margin: 20px auto; }
 
   .checkout-box { margin: 20px 0; }
+  .footer-buttons{
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
 
   .products { grid-template-columns: repeat(2, 1fr); }
   .product-box { grid-template-columns: 110px 1fr; }
 }
 
 @media (max-width: 480px) {
-  .pedido-item { flex-wrap: wrap; gap: 10px; }
+  .pedido-item { flex-wrap: wrap; gap: 30px; }
   .item-controles { margin: 0; }
+}
+
+/* ── SKELETON LOADING ── */
+.skeleton {
+  background: var(--card-bg2);
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--card-border);
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
+  position: relative;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.04) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+.skeleton-img {
+  width: 68px;
+  height: 68px;
+  border-radius: var(--radius-sm);
+  background: var(--card-border);
+  flex-shrink: 0;
+}
+
+.skeleton-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: var(--card-border);
+}
+
+.skeleton-line.lg { width: 60%; }
+.skeleton-line.md { width: 35%; }
+.skeleton-line.sm { width: 20%; }
+
+.skeleton-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.skeleton-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--card-border);
+  flex-shrink: 0;
+}
+
+.skeleton-num {
+  width: 20px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--card-border);
 }

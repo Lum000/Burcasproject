@@ -67,13 +67,17 @@ db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS pedidos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      mesa_numero INTEGER,
       mesa_id INTEGER,
       produto_id INTEGER,
       quantidade INTEGER NOT NULL CHECK (quantidade >= 0),
       desc TEXT,
+      preco REAL,
       extras TEXT,
       idLoja TEXT NOT NULL,
       status TEXT,
+      func TEXT,
+      haveExtra TEXT,
       hora TEXT
     )
   `)
@@ -88,7 +92,8 @@ db.serialize(() => {
   )`)
   db.run(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_pedido_unico 
-    ON pedidos (mesa_id, produto_id, status);`)
+    ON pedidos (mesa_id, produto_id, status, IFNULL(extras, ''))
+  `);
 })
 
 /* Armazenar as logos e imagens */
@@ -140,6 +145,21 @@ function checkRole(...roles) {
     next();
   };
 }
+
+
+
+///get loja info
+app.get('/lojasInfo', verifyToken, (req,res) =>{
+  const idLoja = req.user.idLoja
+
+  db.all("SELECT * FROM lojasInfo WHERE idLoja = ?",[idLoja], (err,result) =>{
+    if(err){
+      return res.json({error: "Erro ao retornar ! "})
+    }
+    return res.json(result)
+  })
+})
+
 
 // Verificar usuario
 app.get('/dashboard', verifyToken, (req, res) => {
@@ -240,71 +260,65 @@ app.get ("/mesa/:id",(req,res)=>{
 
 /*Imprimi Produto0 */
 async function dispararImpressao(mesa_id, itens) {
-  console.log("Rodando impressão ! " , itens)
-    // let printer = new ThermalPrinter({
-    //     type: Types.EPSON,
-    //     interface: '\\\\localhost\\BEMATECH',
-    //     characterSet: 'PC860_PORTUGUESE',
-    //     width: 42
-    // });
+  let printer = new ThermalPrinter({
+    type: Types.EPSON,
+    interface: './simulacao_cupom.txt',
+    width: 42,
+    characterSet: 'PC860_PORTUGUESE'
+  });
 
-    let printer = new ThermalPrinter({
-        type: Types.EPSON, // Ou BEMATECH
-        interface: './simulacao_cupom.txt', // Cria um arquivo na raiz do projeto
-        width: 42, // Largura padrão da Bematech de 80mm
-        characterSet: 'PC860_PORTUGUESE'
+  try {
+    printer.alignCenter();
+    printer.bold(true);
+    printer.setTextSize(2, 2);
+    printer.println("NOVO PEDIDO");
+    printer.println(`MESA: ${mesa_id}`);
+    printer.setTextSize(1, 1);
+    printer.bold(false);
+    printer.println("----------------------------------------");
+
+    itens.forEach(item => {
+      printer.setTextSize(2, 2);
+      const nome = (item.nome || 'PRODUTO').substring(0, 20).toUpperCase();
+      const qtd  = `x${item.quantidade || 1}`;
+      printer.println(`${nome} ${qtd}`);
+      printer.setTextSize(1, 1);
+
+      // ── EXTRAS ──
+      // extras pode vir como string JSON ou array
+      try {
+        const extrasRaw = item.extras;
+        if (extrasRaw) {
+          const lista = typeof extrasRaw === 'string' ? JSON.parse(extrasRaw) : extrasRaw;
+          if (Array.isArray(lista) && lista.length > 0) {
+            const nomes = lista.map(e => e.nome || e).join(', ').toUpperCase();
+            printer.println(` + EXTRAS: ${nomes}`);
+          }
+        }
+      } catch { /* extras inválido, ignora */ }
+
+      // ── OBS ──
+      // unifica item.desc e item.obs — aceita qualquer um dos dois
+      const obs = (item.obs || item.desc || '').trim().toUpperCase();
+      if (obs) {
+        printer.println(`  >> OBS: ${obs}`);
+      }
+
+      printer.println("-".repeat(42));
     });
 
+    printer.alignCenter();
+    printer.println(`HORA: ${new Date().toLocaleTimeString('pt-BR')}`);
+    printer.newLine();
+    printer.newLine();
+    printer.newLine();
+    printer.cut();
 
-
-    try {
-        printer.alignCenter();
-        printer.bold(true);
-        printer.println("NOVO PEDIDO - COZINHA");
-        printer.setTextSize(2,2);
-        printer.println(`MESA: ${mesa_id}`);
-        printer.setTextSize(1,1);
-        printer.bold(false);
-        printer.println("--------------------------------");
-        printer.setTextSize(2,2);
-
-        itens.forEach(item => {
-          const nomeSeguro = (item.nome && typeof item.nome === 'string') ? item.nome : "PRODUTO";
-          
-          const nomeBase = nomeSeguro.substring(0, 30).toUpperCase().padEnd(32);
-          const qtdBase = `x${item.quantidade || 1}`.padStart(6);
-          
-          printer.println(nomeBase + qtdBase);
-          console.log("Extras = " + item.extras)
-          console.log("Descrição = " + item.obs)
-
-          if (item.desc && typeof item.desc === 'string') {
-              const obs = item.obs.trim().toUpperCase();
-              const extras = item.extras.trim().toUpperCase();
-              if (obs !== "") {
-                  printer.setTextSize(2,2);
-                  printer.println(` Extras:  ${extras}`);
-                  printer.println(`  >> OBS: ${obs}`);
-              }
-          }
-          printer.setTextSize(1,1);
-
-          printer.println("-".repeat(42)); 
-      });
-
-        printer.println("--------------------------------");
-        printer.println(`HORA: ${new Date().toLocaleTimeString('pt-BR')}`);
-        printer.newLine();
-        printer.newLine();
-        printer.newLine();
-        printer.newLine();
-        printer.cut();
-
-        await printer.execute();
-        console.log("Pedido enviado para a cozinha!");
-    } catch (error) {
-        console.error("Erro na impressora física:", error);
-    }
+    await printer.execute();
+    console.log("Pedido enviado para a cozinha!");
+  } catch (error) {
+    console.error("Erro na impressora:", error);
+  }
 }
 
 /*Alterar Dados da Loja */
@@ -314,18 +328,24 @@ async function dispararImpressao(mesa_id, itens) {
 
 app.post("/add-multi-products", verifyToken ,  (req, res) => {
     const idLoja = req.user.idLoja;
-    const { mesa_id, itens} = req.body;
-    console.log("Body: " , req.body)
+    const funcionario = req.user.nome;
+    const { mesa_id,mesa_numero,precoFinal, itens} = req.body;
 
     if (!itens || itens.length === 0) {
         return res.status(400).json({ error: "Carrinho vazio" });
     }
+    
 
     db.serialize(() => {
         itens.forEach((item) => {
-            const sqlBusca = "SELECT id, quantidade FROM pedidos WHERE mesa_id = ? AND produto_id = ? AND idLoja = ? AND status = 'aberto'";
+            const sqlBusca = item.extras
+              ? "SELECT id, quantidade FROM pedidos WHERE mesa_id = ? AND produto_id = ? AND idLoja = ? AND status = 'aberto' AND extras = ?"
+              : "SELECT id, quantidade FROM pedidos WHERE mesa_id = ? AND produto_id = ? AND idLoja = ? AND status = 'aberto' AND extras IS NULL";
+            const paramsBusca = item.extras
+              ? [mesa_id, item.id, idLoja, item.extras]
+              : [mesa_id, item.id, idLoja];
             
-            db.get(sqlBusca, [mesa_id, item.id , idLoja], (err, row) => {
+            db.get(sqlBusca, paramsBusca , (err, row) => {
                 if (err) {
                     console.error("Erro na busca:", err);
                     return;
@@ -335,8 +355,8 @@ app.post("/add-multi-products", verifyToken ,  (req, res) => {
                     const novaQtd = row.quantidade + item.quantidade;
                     db.run("UPDATE pedidos SET quantidade = ? WHERE id = ? AND idLoja = ?", [novaQtd, row.id, idLoja]);
                 } else {
-                    const sqlInsert = "INSERT INTO pedidos (mesa_id, produto_id,idLoja, quantidade,status,extras,desc, hora) VALUES (?, ?, ?, ?, ?, ?, ? , ?)";
-                    db.run(sqlInsert, [mesa_id, item.id,idLoja , item.quantidade,'aberto',item.extras,item.obs, new Date().toISOString()]);
+                    const sqlInsert = "INSERT INTO pedidos (mesa_id,mesa_numero,func,produto_id,idLoja, quantidade,status,extras,desc, hora,preco) VALUES (?,?,?, ?, ?, ?, ?, ?, ? , ?,?)";
+                    db.run(sqlInsert, [mesa_id,mesa_numero,funcionario, item.id,idLoja , item.quantidade,'aberto',item.extras,item.obs, new Date().toISOString(),precoFinal]);
                 }
             });
         });
@@ -345,6 +365,63 @@ app.post("/add-multi-products", verifyToken ,  (req, res) => {
 
     res.json({ success: true, message: "Pedido processado com sucesso!" });
 });
+
+
+async function getMesaIdByNumber(req, numero) {
+  const idLoja = req.user.idLoja; 
+
+  return new Promise((resolve, reject) => {
+    db.get(
+      "SELECT id FROM mesas WHERE numero = ? AND idLoja = ?",
+      [numero, idLoja],
+      (err, result) => {
+        if (err)     return reject(new Error('Erro ao buscar mesa: ' + err.message));
+        if (!result) return reject(new Error('Mesa não encontrada'));
+        resolve(result.id);
+      }
+    );
+  });
+}
+/* Alterar Mesa */
+app.post("/mesa/alterar/:mesa_id", verifyToken, async (req,res) => {
+  const idLoja = req.user.idLoja;
+  const mesa_id = req.params.mesa_id;
+  const {antigoNumero, novoNumero} = req.body;
+  db.get(`SELECT * FROM mesas WHERE numero = ? AND idLoja = ? `,[novoNumero,idLoja], async (err,result) =>{
+    if(err){
+      return res.json({error: "Erro ao encontrar a nova mesa !! " + err.message})
+    }
+    const mesa_newId = await getMesaIdByNumber(req,result.numero)
+    db.all("SELECT * FROM pedidos WHERE mesa_id = ? AND idLoja = ?",[result.id,idLoja],(error,resultado) =>{
+      if(error){
+        return res.json({error: "Erro al verificar produtos da mesa " + error.message})
+      }
+      if(resultado.length > 0){
+        return res.json({error: "Mesa ja existe e tem produtos ! "})
+      }
+      console.log
+      db.run("UPDATE pedidos SET mesa_id = ?,mesa_numero = ? WHERE idLoja = ? AND mesa_id = ? ",[mesa_newId,novoNumero,idLoja,mesa_id],(err,result) => {
+        if(err){
+          res.json({error: "Não Foi Possivel Alterar a Mesa " + err.message})
+        }
+        try{
+          db.run("UPDATE mesas SET status = 'livre' WHERE id = ?", [mesa_id], (err) => {
+            if (err) return res.status(500).json({ error: 'Erro ao liberar mesa antiga: ' + err.message });
+
+            db.run("UPDATE mesas SET status = 'ocupada' WHERE id = ?", [mesa_newId], (err) => {
+              if (err) return res.status(500).json({ error: 'Erro ao ocupar mesa nova: ' + err.message });
+
+              return res.json({ success: true, message: 'Mesa alterada com sucesso!' });
+            });
+          });
+        }
+        catch(err){
+          return res.json({error: "Erro ao alterar status das mesas !!" + err.message})
+        }
+      })
+    })
+  })
+})
 /* Pega os produtos existentes na mesa */
 
 app.get ("/mesa/:id/products/:mesa_id", (req,res) =>{
@@ -558,6 +635,17 @@ app.get("/getprodutobody/:productid",(req,res)=>{
   })
 })
 
+app.get("/getExtras/:pedido_id", (req, res) => {
+  db.get(
+    "SELECT id,extras, desc,preco FROM pedidos WHERE id = ?",
+    [req.params.pedido_id],
+    (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(row || {});
+    }
+  );
+});
+
 /*Procurar produto por categoria */
 app.get("/products/:category", async (req,res) =>{
     db.all("SELECT * FROM produtos WHERE categoria = ?",[req.params.category],(err,produto) =>{
@@ -625,7 +713,7 @@ app.get('/addMore/:productid/:mesaid',  async (req,res) =>{
 
   try{
     db.run(
-    "UPDATE pedidos SET quantidade = quantidade + 1 WHERE mesa_id = ? AND produto_id = ? AND status = 'aberto' ",
+    "UPDATE pedidos SET quantidade = quantidade + 1 WHERE mesa_id = ? AND id = ? AND status = 'aberto' ",
     [mesa_id, product_id],
     function(err) {
       if (err) {
@@ -650,11 +738,11 @@ app.get('/menosUm/:productid/:mesaid',  async (req,res) =>{
   const mesa_id = req.params.mesaid
 
   try{
-    db.get("SELECT quantidade FROM pedidos WHERE mesa_id = ? AND produto_id = ?",[mesa_id,product_id] ,(err,row) => {
+    db.get("SELECT quantidade FROM pedidos WHERE mesa_id = ? AND id = ?",[mesa_id,product_id] ,(err,row) => {
       if(row && row.quantidade > 1){
         const novaquantidade = row.quantidade - 1;
           db.run(
-          "UPDATE pedidos SET quantidade = quantidade - 1 WHERE mesa_id = ? AND produto_id = ? AND status = 'aberto' ",
+          "UPDATE pedidos SET quantidade = quantidade - 1 WHERE mesa_id = ? AND id = ? AND status = 'aberto' ",
           [mesa_id, product_id],
           function(err) {
             if (err) {
@@ -676,10 +764,44 @@ app.get('/menosUm/:productid/:mesaid',  async (req,res) =>{
 
 /*Apaga o produto da mesa */
 
-app.get("/deletarProduto/:productid/:mesaid", (req,res) =>{
-  const {productid, mesaid} = req.params;
+app.post("/alterLoja", verifyToken, (req,res) =>{
+  const {nomeLoja,logoLoja} = req.body;
+  const idLoja = req.user.idLoja;
+  console.log(`nome Loja = ${nomeLoja} e logoLoja = ${logoLoja} e idLoja = ${idLoja}`)
 
-  db.run("DELETE FROM pedidos WHERE produto_id = ? AND mesa_id = ? AND status = 'aberto' ", [productid,mesaid],
+  if(nomeLoja && logoLoja){
+    db.run("UPDATE lojasInfo SET nomeLoja = ?, logo = ? WHERE idLoja = ?",[nomeLoja,logoLoja,idLoja], (err,result) =>{
+      if(err){
+        return res.json({error: "Não foi possivel atualizar os dados" + err.message})
+      }
+      return res.json({success: "Informações Salvas com Sucesso !!!"})
+    })
+  }
+  else if(!nomeLoja && logoLoja){
+    db.run("UPDATE lojasInfo SET logo = ? WHERE idLoja = ?",[logoLoja,idLoja], (err,result) =>{
+    if(err){
+      return res.json({error: "Não foi possivel atualizar os dados" + err.message})
+    }
+      return res.json({success: "Logo Salva com Sucesso !!!"})
+    })
+  }
+  else if(nomeLoja && !logoLoja){
+    db.run("UPDATE lojasInfo SET nomeLoja = ? WHERE idLoja = ?",[nomeLoja,idLoja], (err,result) =>{
+    if(err){
+      return res.json({error: "Não foi possivel atualizar os dados" + err.message})
+    }
+      return res.json({success: "Nome Atualizado com Sucesso !!!"})
+    })
+  }
+  else if(!nomeLoja && !logoLoja){
+    return res.json({error: "Nenhuma informação transferida "})
+  }
+})
+
+app.get("/deletarProduto/:productid/:mesaid", verifyToken, (req,res) =>{
+  const {productid, mesaid} = req.params;
+  const idLoja = req.user.idLoja;
+  db.run("DELETE FROM pedidos WHERE id = ? AND mesa_id = ? AND status = 'aberto' AND idLoja = ? ", [productid,mesaid,idLoja],
     function(err){
       if(err){
         return res.status(500).json({message: "Erro ao apagar o produto de ID " + productid + " Erro : " + err.message})
