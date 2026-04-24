@@ -259,56 +259,102 @@ app.get ("/mesa/:id",(req,res)=>{
 
 
 /*Imprimi Produto0 */
-async function dispararImpressao(mesa_id, itens) {
+async function dispararImpressao(mesa_id, itens, func) {
+  // let printer = new ThermalPrinter({
+  //   type: Types.EPSON,
+  //   interface: './simulacao_cupom.txt',
+  //   width: 42,
+  //   characterSet: 'PC860_PORTUGUESE'
+  // });
   let printer = new ThermalPrinter({
-    type: Types.EPSON,
-    interface: './simulacao_cupom.txt',
-    width: 42,
-    characterSet: 'PC860_PORTUGUESE'
+    type: Types.EPSON, // A Bematech MP-4200 aceita comandos EPSON (ESC/POS) perfeitamente
+      interface: '\\\\localhost\\BEMATECH', // Verifique se o nome no compartilhamento é EXATAMENTE esse
+      characterSet: 'PC860_PORTUGUESE', // Conjunto de caracteres para PT-BR
+      removeSpecialCharacters: false,
+      width: 42
   });
+  
 
   try {
+    const linha     = "=".repeat(42);
+    const linhafina = "-".repeat(42);
+
+    // ── CABEÇALHO ──
     printer.alignCenter();
     printer.bold(true);
-    printer.setTextSize(2, 2);
+    printer.println(linha);
+    printer.setTextSize(2, 1);
     printer.println("NOVO PEDIDO");
+    printer.setTextSize(1, 1);
+    printer.println(linha);
+    printer.bold(false);
+
+
+    // ── INFO ──
+    printer.alignLeft();
+    printer.bold(true);
+    printer.setTextSize(1, 2);
     printer.println(`MESA: ${mesa_id}`);
     printer.setTextSize(1, 1);
     printer.bold(false);
-    printer.println("----------------------------------------");
+    printer.println(`HORA: ${new Date().toLocaleTimeString('pt-BR')}`);
+    printer.println(`OPER: ${func || '—'}`);
+    printer.println(linhafina);
 
+    // ── ITENS ──
     itens.forEach(item => {
-      printer.setTextSize(2, 2);
-      const nome = (item.nome || 'PRODUTO').substring(0, 20).toUpperCase();
+
+      // nome + quantidade em tamanho grande
+      printer.alignLeft();
+      printer.bold(true);
+      const nome = (item.nome || 'PRODUTO').substring(0, 16).toUpperCase();
       const qtd  = `x${item.quantidade || 1}`;
-      printer.println(`${nome} ${qtd}`);
-      printer.setTextSize(1, 1);
+      printer.println(`${nome.padEnd(18)}${qtd}`);
+      printer.bold(false);
 
       // ── EXTRAS ──
-      // extras pode vir como string JSON ou array
       try {
         const extrasRaw = item.extras;
-        if (extrasRaw) {
-          const lista = typeof extrasRaw === 'string' ? JSON.parse(extrasRaw) : extrasRaw;
-          if (Array.isArray(lista) && lista.length > 0) {
-            const nomes = lista.map(e => e.nome || e).join(', ').toUpperCase();
-            printer.println(` + EXTRAS: ${nomes}`);
-          }
+      if (extrasRaw) {
+        let lista = [];
+
+        try {
+          // tenta parsear como JSON primeiro
+          const parsed = JSON.parse(extrasRaw);
+          lista = Array.isArray(parsed) ? parsed : [];
+        } catch {
+          // se não for JSON, divide por vírgula
+          lista = extrasRaw
+            .split(',')
+            .map(e => e.trim())
+            .filter(e => e && e !== 'Sem adicionais');
         }
-      } catch { /* extras inválido, ignora */ }
+
+        if (lista.length > 0) {
+          printer.println(' ADICIONAIS:');
+          lista.forEach(e => {
+            // suporta tanto objeto {nome, preco} quanto string simples
+            const nomeExtra = typeof e === 'object' ? e.nome : e;
+            printer.println(`  + ${nomeExtra.toUpperCase()}`);
+          });
+        }
+      }
+      } catch {}
 
       // ── OBS ──
-      // unifica item.desc e item.obs — aceita qualquer um dos dois
       const obs = (item.obs || item.desc || '').trim().toUpperCase();
       if (obs) {
-        printer.println(`  >> OBS: ${obs}`);
+        printer.println(` OBS: ${obs}`);
       }
 
-      printer.println("-".repeat(42));
+      printer.println(linhafina);
     });
 
+    // ── RODAPÉ ──
     printer.alignCenter();
-    printer.println(`HORA: ${new Date().toLocaleTimeString('pt-BR')}`);
+    printer.println(`TOTAL DE ITENS: ${itens.length}`);
+    printer.println(linha);
+    printer.newLine();
     printer.newLine();
     printer.newLine();
     printer.newLine();
@@ -361,7 +407,7 @@ app.post("/add-multi-products", verifyToken ,  (req, res) => {
             });
         });
     });
-    dispararImpressao(mesa_id,itens)
+    dispararImpressao(mesa_id,itens,req.user.nome)
 
     res.json({ success: true, message: "Pedido processado com sucesso!" });
 });
@@ -509,46 +555,93 @@ app.post("/imprimir-comando", async (req, res) => {
         return res.status(500).json({ error: "Falha ao instanciar a impressora." });
     }
     try {
-        printer.alignCenter();
-        printer.println("BURCAS LANCHONETE");
-        printer.println("------------------------------------------");
-        
-        printer.alignLeft();
-        printer.println(`MESA: ${mesa_id}`);
-        printer.println(`DATA: ${new Date().toLocaleString('pt-BR')}`);
-        printer.println("------------------------------------------");
-        
+  const linha    = "=".repeat(42);
+  const linhafina = "-".repeat(42);
 
-        let total = 0;
-        itens.forEach(item => {
-            valortotalprod = item.preco * item.quantidade;
-            total += item.preco * item.quantidade;
-            // Formatando a linha manualmente para garantir alinhamento
-            const nome = item.nome.substring(0, 18).padEnd(19);
-            const qtd = `x${item.quantidade}`.padEnd(5);
-            const preco = `R$${item.preco.toFixed(2)}`.padStart(8);
-            const precofinal = `R${valortotalprod.toFixed(2)}`.padStart(10)
-            printer.println(`${nome}${qtd}${preco}${precofinal}`);
-        });
-        const valorTotal = total.toFixed(2);
-        const valorDividido = (total / 2).toFixed(2);
+  // ── CABEÇALHO ──
+  printer.alignCenter();
+  printer.bold(true);
+  printer.setTextSize(1, 1);
+  printer.println(linha);
+  printer.setTextSize(2, 1);
+  printer.println("BURCAS");
+  printer.println("LANCHONETE");
+  printer.setTextSize(1, 1);
+  printer.println(linha);
+  printer.bold(false);
 
-        printer.println("--------------------------------");
-        printer.alignRight();
-        printer.bold(true);
-        printer.println(`TOTAL: R$ ${valorTotal}`);
-        printer.println(`Total dividido em 2 pessoas : 2x R$ ${valorDividido}`);
-        printer.bold(false);
+  // ── INFO DA MESA ──
+  printer.alignLeft();
+  printer.println(`MESA  : ${mesa_id}`);
+  printer.println(`DATA  : ${new Date().toLocaleString('pt-BR')}`);
+  printer.println(`OPER. : ${itens[0]?.func || '—'}`);
+  printer.println(linhafina);
 
-        // No node-thermal-printer, usamos newLine() repetidamente ou um comando bruto
-        printer.newLine();
-        printer.newLine();
-        printer.newLine();
-        printer.newLine();
+  // ── CABEÇALHO DAS COLUNAS ──
+  const colNome  = "ITEM".padEnd(20);
+  const colQtd   = "QTD".padEnd(5);
+  const colUnit  = "UNIT".padStart(7);
+  const colTotal = "TOTAL".padStart(8);
+  printer.println(`${colNome}${colQtd}${colUnit}${colTotal}`);
+  printer.println(linhafina);
 
-        printer.cut();
+  // ── ITENS ──
+  let total = 0;
 
-        const success = await printer.execute();
+  itens.forEach(item => {
+    const subtotal = item.preco * item.quantidade;
+    total += subtotal;
+
+    const nome     = (item.nome || 'PRODUTO').substring(0, 20).toUpperCase().padEnd(20);
+    const qtd      = `x${item.quantidade}`.padEnd(5);
+    const unit     = `R$${parseFloat(item.preco).toFixed(2)}`.padStart(7);
+    const totalStr = `R$${subtotal.toFixed(2)}`.padStart(8);
+
+    printer.println(`${nome}${qtd}${unit}${totalStr}`);
+
+    // ── EXTRAS ──
+      try {
+        const extras = typeof item.extras === 'string' ? JSON.parse(item.extras) : item.extras;
+        if (Array.isArray(extras) && extras.length > 0) {
+          extras.forEach(e => {
+            const nomeExtra  = `  + ${e.nome}`.padEnd(25);
+            const precoExtra = `R$${parseFloat(e.preco).toFixed(2)}`.padStart(15);
+            printer.println(`${nomeExtra}${precoExtra}`);
+          });
+        }
+      } catch {}
+
+      // ── OBS ──
+      const obs = (item.desc || item.obs || '').trim();
+      if (obs) {
+        printer.println(`  >> OBS: ${obs.toUpperCase()}`);
+      }
+
+      printer.println(linhafina);
+    });
+
+    // ── TOTAIS ──
+    printer.println(linha);
+    printer.alignRight();
+    printer.bold(true);
+    printer.println(`TOTAL: R$ ${total.toFixed(2)}`);
+    printer.bold(false);
+    printer.println(`Dividido 2x: R$ ${(total / 2).toFixed(2)} p/ pessoa`);
+    printer.println(linha);
+
+    // ── RODAPÉ ──
+    printer.alignCenter();
+    printer.println(" ");
+    printer.println("Obrigado pela preferencia!");
+    printer.println("Volte sempre :)");
+    printer.println(" ");
+
+    printer.newLine();
+    printer.newLine();
+    printer.newLine();
+    printer.cut();
+
+    const success = await printer.execute();
         if (success) {
             console.log("Impresso com sucesso via Spooler!");
             res.json({ success: true });
