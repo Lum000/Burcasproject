@@ -20,6 +20,8 @@ const app = express()
 app.use(cookieParser());
 app.use(express.json())
 app.use(express.static("public"))
+const { Bonjour } = require('bonjour-service');
+const bonjour = new Bonjour();
 
 const db = new sqlite3.Database("lanchonete.db")
 
@@ -543,12 +545,13 @@ app.post("/imprimir-comando", async (req, res) => {
     //     removeSpecialCharacters: false,
     //     width: 42
     // });
-    let printer = new ThermalPrinter({
-      type: Types.EPSON, // Ou BEMATECH
-      interface: 'printer:default', // Nome exato da impressora no Windows
-      characterSet: 'PC860_PORTUGUESE',
-      width: 42 // Isso é fundamental para ver se o texto quebra
-    });
+  let printer = new ThermalPrinter({
+    type: Types.EPSON, // A Bematech MP-4200 aceita comandos EPSON (ESC/POS) perfeitamente
+      interface: '\\\\localhost\\BEMATECH', // Verifique se o nome no compartilhamento é EXATAMENTE esse
+      characterSet: 'PC860_PORTUGUESE', // Conjunto de caracteres para PT-BR
+      removeSpecialCharacters: false,
+      width: 42
+  });
 
     // Teste rápido para validar se o tipo foi reconhecido
     if (!printer) {
@@ -563,7 +566,8 @@ app.post("/imprimir-comando", async (req, res) => {
   printer.bold(true);
   printer.setTextSize(1, 1);
   printer.println(linha);
-  printer.setTextSize(2, 1);
+  printer.setTextSize(1 v
+    , 1);
   printer.println("BURCAS");
   printer.println("LANCHONETE");
   printer.setTextSize(1, 1);
@@ -683,6 +687,14 @@ app.get("/", (req, res) => {
 
 app.listen(3000, () => {
   console.log("Servidor rodando na porta 3000")
+  
+  bonjour.publish({
+    name: 'Burcas Lanchonete',
+    type: 'http',
+    port: 3000,
+    host: 'burcas.local'
+  });
+
 })
 
 

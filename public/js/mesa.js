@@ -413,10 +413,9 @@ async function confirmarPedido(mesa_id) {
 }
 
 function adicionarAoCarrinho(produtoId, nome, preco, obs, extrasSelecionados) {
-    // Criamos a string de extras para exibição e comparação
+    
     const extrasString = extrasSelecionados.length > 0 ? extrasSelecionados.sort().join(", ") : "Sem adicionais";
     
-    // Chave única: ID + Extras + Obs
     const itemKey = `${produtoId}-${extrasString}-${obs}`;
 
     const indexExistente = carrinhoTemporario.findIndex(item => {
