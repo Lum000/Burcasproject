@@ -43,7 +43,7 @@ async function mostrarSkeleton(quantidade = 3) {
 
 function esconderSkeleton() {
   const divPedidos = document.querySelector('.pedidos');
-  divPedidos.innerHTML = '';
+  divPedidos.innerHTML = '<h2>Pedidos</h2>';
 }
 
 
@@ -62,14 +62,23 @@ async function isadmin(){
 
 function togleAdmin(){
     const btn_remover = document.querySelectorAll('.btn_remover')
+    const adminpanel = document.querySelectorAll('.adminpanel')
     if(isAdmin){
         btn_remover.forEach((item) =>{
             item.style.display = 'block';
         })
+        adminpanel.forEach((item) =>{
+            item.style.display = 'block';
+        })
     }
-    btn_remover.forEach((item) =>{
-        item.style.display = 'none';
-    })
+    else{
+        btn_remover.forEach((item) =>{
+            item.style.display = 'none';
+        })
+        adminpanel.forEach((item) =>{
+            item.style.display = 'none';
+        })
+    }
 }
 
 window.onload = isadmin;
@@ -110,14 +119,13 @@ function showToast(message,error){
 
 
 async function getProducts(id, mesa) {
-    await mostrarSkeleton(4)
 
     const res = await fetch(`mesa/${mesa}/products/${id}`);
     const mesa_products = await res.json();
 
 
     const divPedidos = document.querySelector('.pedidos');
-    divPedidos.innerHTML = '';
+    divPedidos.innerHTML = '<h2>Pedidos</h2>';
 
     if (!Array.isArray(mesa_products) || mesa_products.length === 0) {
         divPedidos.innerHTML = `
@@ -127,6 +135,7 @@ async function getProducts(id, mesa) {
         </div>`;
         return;
     }
+    await mostrarSkeleton(4)
 
     divPedidos.innerHTML = '<h2>Pedidos</h2>';
     let totalGeral = 0;
@@ -140,9 +149,24 @@ async function getProducts(id, mesa) {
         const descObs  = await fetch("/getExtras/" + item.id);
         const dadosObs = await descObs.json();
 
-        const extrasTexto = dadosObs.extras || '';
+        let extrasTexto = '';
+
+        if (dadosObs.extras) {
+        try {
+            const extrasArray = JSON.parse(dadosObs.extras);
+
+            if (Array.isArray(extrasArray) && extrasArray.length > 0) {
+            extrasTexto = extrasArray
+                .map(e => `${e.nome} (+R$ ${Number(e.preco).toFixed(2)})`)
+                .join(', ');
+            }
+        } catch (e) {
+            extrasTexto = '';
+        }
+        }
         const obsTexto    = dadosObs.desc   || '';
         const precoExtra = dadosObs.preco || '';
+        console.log("preco " + precoExtra +"prodito" + item.id)
 
         totalGeral += precoExtra * item.quantidade;
         
@@ -238,10 +262,12 @@ async function getMesaId(){
 
 async function openAdd() {
     document.getElementById("productAlert").style.display = "flex"
+    document.body.style.overflow = "hidden";
     showCategory("lanches")
 }
 function closeAlert(){
     document.getElementById("productAlert").style.display = "none"
+    document.body.style.overflow = "auto";
 }
 
 
@@ -369,7 +395,7 @@ function renderPedidos(lista){
 
     const divPedidos = document.querySelector(".pedidos")
 
-    divPedidos.innerHTML = ""
+    divPedidos.innerHTML = '<h2>Pedidos</h2>';
 
     lista.forEach(pedido => {
 
@@ -398,7 +424,6 @@ async function confirmarPedido(mesa_id) {
         body: JSON.stringify({
             mesa_id: mesa_id,
             mesa_numero: mesa,
-            precoFinal: precoFinalComExtras,
             itens: carrinhoTemporario
         })
     });
@@ -414,7 +439,11 @@ async function confirmarPedido(mesa_id) {
 
 function adicionarAoCarrinho(produtoId, nome, preco, obs, extrasSelecionados) {
     
-    const extrasString = extrasSelecionados.length > 0 ? extrasSelecionados.sort().join(", ") : "Sem adicionais";
+    const extrasString = extrasSelecionados
+    .map(e => e.nome)
+    .sort()
+    .join(",");
+    const totalExtras = extrasSelecionados.reduce((acc, e) => acc + e.preco, 0);
     
     const itemKey = `${produtoId}-${extrasString}-${obs}`;
 
@@ -426,13 +455,12 @@ function adicionarAoCarrinho(produtoId, nome, preco, obs, extrasSelecionados) {
         // Se for exatamente igual, aumenta a quantidade
         carrinhoTemporario[indexExistente].quantidade += 1;
     } else {
-        // Se for diferente (outro extra ou outra obs), cria nova linha
         carrinhoTemporario.push({ 
             id: produtoId, 
             nome: nome, 
-            preco: preco, 
+            preco: preco + totalExtras,
             quantidade: 1, 
-            extras: extrasString, 
+            extras: JSON.stringify(extrasSelecionados),
             obs: obs 
         });
     }
@@ -440,6 +468,22 @@ function adicionarAoCarrinho(produtoId, nome, preco, obs, extrasSelecionados) {
     showToast();
     renderizarCarrinhoTemporario();
 }
+
+function normalizarExtras(extras) {
+    if (!extras) return [];
+
+    if (Array.isArray(extras)) return extras;
+
+    try {
+        return JSON.parse(extras);
+    } catch {
+        return [];
+    }
+}
+
+
+
+
 function renderizarCarrinhoTemporario() {
     const listaLateral = document.getElementById("carrinhoTemporarioList");
     const totalTexto = document.getElementById("totalCarrinhoTemp");
@@ -457,10 +501,20 @@ function renderizarCarrinhoTemporario() {
     let somaTotal = 0;
 
     carrinhoTemporario.forEach((item, index) => {
-        const displayExtras = item.extras;
+        const extrasArray = normalizarExtras(item.extras);
+
+        const totalExtras = extrasArray.reduce((acc, e) => {
+            const preco = Number(String(e.preco).replace(",", ".")) || 0;
+            return acc + preco;
+        }, 0);
+
+        const displayExtras = extrasArray.length > 0
+            ? extrasArray.map(e => `${e.nome} (+${e.preco})`).join(", ")
+            : "Sem adicionais";
         const displayObs = item.obs ? ` / Obs: ${item.obs}` : "";
-        const subtotal = item.preco * item.quantidade;
-        console.log("Produto com os extras " + item.extras)
+        const precoUnit = Number(item.preco || 0 );
+        const subtotal = precoUnit * item.quantidade;
+        console.log("Produto com os extras " + subtotal + precoUnit)
         somaTotal += subtotal;
 
         const divItem = document.createElement("div");
@@ -470,7 +524,7 @@ function renderizarCarrinhoTemporario() {
                 <div class="temp-item-header">
                     <div class="temp-item-info">
                         <span class="temp-item-name">${item.nome}</span>
-                        <span class="temp-item-qty">${item.quantidade}x R$ ${item.preco.toFixed(2)}</span>
+                        <span class="temp-item-qty">${item.quantidade}x R$ ${precoUnit.toFixed(2)}</span>
                     </div>
                     <div class="temp-item-actions">
                         <span class="temp-item-price">R$ ${subtotal.toFixed(2)}</span>
@@ -490,8 +544,8 @@ function renderizarCarrinhoTemporario() {
 
     totalTexto.innerText = `R$ ${somaTotal.toFixed(2)}`;
 }
-function removerDoCarrinhoTemp(index,qty){
-    carrinhoTemporario.splice(index,qty)
+function removerDoCarrinhoTemp(index){
+    carrinhoTemporario.splice(index, 1)
     renderizarCarrinhoTemporario()
 }
 
@@ -506,6 +560,7 @@ function desmarcarTudo() {
 /**Open Modal de produto */
 let valorTotalcomExtras = 0;
 function openProdModal(botao) {
+    document.body.style.overflow = "hidden"
     const id = botao.dataset.id;
     const nome = botao.dataset.nome;
     const precoBase = parseFloat(botao.dataset.preco); // Preço original do produto
@@ -550,10 +605,13 @@ function openProdModal(botao) {
             const nomeExtra = e.target.getAttribute('data-name');
 
             if (e.target.checked) {
-                listaExtras.push(nomeExtra);
+                listaExtras.push({
+                    nome: nomeExtra,
+                    preco: precoExtra
+                })
                 valorExtrasAcumulado += precoExtra;
             } else {
-                listaExtras = listaExtras.filter(n => n !== nomeExtra);
+                listaExtras = listaExtras.filter(e => e.nome !== nomeExtra)
                 valorExtrasAcumulado -= precoExtra;
             }
 
@@ -573,7 +631,13 @@ function openProdModal(botao) {
         precoFinalComExtras = precoBase + valorExtrasAcumulado;
         
         // Passamos a lista de extras atual
-        adicionarAoCarrinho(id, nome, precoFinalComExtras, obs, [...listaExtras]);
+        adicionarAoCarrinho(
+            id,
+            nome,
+            precoBase, 
+            obs,
+            [...listaExtras]
+        );
         
         closeProdModal();
     };
@@ -581,6 +645,12 @@ function openProdModal(botao) {
 
 function closeProdModal(){
     document.getElementById("productModal").style.display="none"
+
+    const modalPrincipal = document.getElementById("productAlert")
+
+    if(modalPrincipal.style.display !== "flex"){
+        document.body.style.overflow = "auto"
+    }
 }
 
 
@@ -629,12 +699,25 @@ async function processarPagamento() {
         }
     }
 
-    // Aqui você enviaria para o seu backend
-    console.log(`Processando pagamento de R$ ${valorPago} via ${tipo}`);
+    try{
+        const req = await fetch('/pagaparcial',{
+            method: 'POST',
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                mesaNumero: mesa,
+                valor: valorPago 
+            })
+        })
+        const res =  await req.json()
+        console.log(res)
+    }
+    catch(err){
+        console.log("Erro de pagamento parcial " + err.message)
+    }
 
     alert("Pagamento processado com sucesso!");
     closeCheckout();
-    location.reload(); // Recarrega para limpar a mesa
+    location.reload();
 }
 
 /*Imrpessao do pagamento  */

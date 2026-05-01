@@ -56,6 +56,24 @@ async function carregarStats() {
     document.getElementById('stat-produtos').textContent = Array.isArray(produtos) ? produtos.length : '—';
   } catch {}
 }
+function previewEditImg() {
+  const file = document.getElementById('edit-img-input').files[0];
+  if (!file) return;
+  const img  = document.getElementById('edit-img-atual');
+  const placeholder = document.getElementById('edit-img-placeholder');
+  img.src = URL.createObjectURL(file);
+  img.style.display = 'block';
+  placeholder.style.display = 'none';
+}
+
+async function fazerBackupManual() {
+  const res  = await fetch('/admin/backup', {
+    method: 'POST',
+    credentials: 'include'
+  });
+  const data = await res.json();
+  showToast(data.message || data.error);
+}
 
 // ── LOGO ──
 function previewLogo() {
@@ -179,6 +197,21 @@ function abrirEdicaoProduto(id) {
   document.getElementById('edit-categoria').value  = p.categoria || 'lanches';
   const lista = document.getElementById('edit-extras-lista');
   lista.innerHTML = '';
+
+  const imgAtual      = document.getElementById('edit-img-atual');
+  const imgPlaceholder = document.getElementById('edit-img-placeholder');
+  document.getElementById('edit-img-input').value = '';
+
+  if (p.img) {
+    imgAtual.src = `/uploads/${p.img}`;
+    imgAtual.style.display = 'block';
+    imgPlaceholder.style.display = 'none';
+  } else {
+    imgAtual.style.display = 'block';
+    imgAtual.src = '';
+    imgPlaceholder.style.display = 'block';
+  }
+
   try {
     const extras = JSON.parse(p.extras || '[]');
     extras.forEach(ex => adicionarExtraModal(ex.nome, ex.preco));
@@ -198,12 +231,14 @@ function adicionarExtraModal(nome = '', preco = '') {
   lista.appendChild(div);
 }
 
+// ── Salva edição do produto ──
 async function salvarEdicao() {
   const id        = document.getElementById('edit-id').value;
   const nome      = document.getElementById('edit-nome').value.trim();
   const preco     = document.getElementById('edit-preco').value;
   const descricao = document.getElementById('edit-descricao').value.trim();
   const categoria = document.getElementById('edit-categoria').value;
+  const imgFile   = document.getElementById('edit-img-input').files[0];
 
   const extras = [];
   document.querySelectorAll('#edit-extras-lista .extra-nome').forEach((input, i) => {
@@ -212,12 +247,19 @@ async function salvarEdicao() {
     if (n) extras.push({ nome: n, preco: isNaN(p) ? 0 : p });
   });
 
+  const formData = new FormData();
+  formData.append('nome',      nome);
+  formData.append('preco',     preco);
+  formData.append('descricao', descricao);
+  formData.append('categoria', categoria);
+  formData.append('extras',    JSON.stringify(extras));
+  if (imgFile) formData.append('imagem', imgFile);
+
   try {
     const res = await fetch(`/produto/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ nome, preco, descricao, categoria, extras: JSON.stringify(extras) })
+      body: formData // ← sem Content-Type header, browser define sozinho
     });
     if (res.ok) { showToast('Produto atualizado!'); fecharModal('modal-produto'); carregarProdutos(); }
     else showToast('Erro ao salvar.', 'error');

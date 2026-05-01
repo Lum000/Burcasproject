@@ -1,5 +1,6 @@
 const express = require("express")
 const sqlite3 = require("sqlite3").verbose()
+require('./backup')
 const path = require("path")
 require('dotenv').config();
 
@@ -56,7 +57,7 @@ db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS produtos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      img TEXT NOT NULL,
+      img TEXT,
       nome TEXT,
       extras TEXT,
       descricao TEXT NOT NULL,
@@ -79,7 +80,7 @@ db.serialize(() => {
       idLoja TEXT NOT NULL,
       status TEXT,
       func TEXT,
-      haveExtra TEXT,
+      parcial NUMBER,
       hora TEXT
     )
   `)
@@ -120,6 +121,34 @@ app.use(express.json())
 app.use(express.urlencoded({extended:true}))
 
 app.use("/uploads",express.static("uploads"))
+
+
+// sistema de backup 
+
+const { fazerBackup } = require('./backup');
+
+app.post('/admin/backup', verifyToken, checkRole('admin'), (req, res) => {
+  try {
+    fazerBackup();
+    res.json({ success: true, message: 'Backup realizado com sucesso!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/admin/backups', verifyToken, checkRole('admin'), (req, res) => {
+  const BACKUP_DIR = path.join(__dirname, 'backups');
+  const arquivos = fs.readdirSync(BACKUP_DIR)
+    .filter(f => f.endsWith('.db'))
+    .map(f => ({
+      nome: f,
+      tamanho: (fs.statSync(path.join(BACKUP_DIR, f)).size / 1024).toFixed(1) + ' KB',
+      data: fs.statSync(path.join(BACKUP_DIR, f)).mtime
+    }))
+    .sort((a, b) => new Date(b.data) - new Date(a.data));
+
+  res.json(arquivos);
+});
 
 
 //Verificar role
@@ -258,10 +287,30 @@ app.get ("/mesa/:id",(req,res)=>{
     })
 })
 
-
+app.post("/pagaparcial" , async (req,res) =>{
+  const {mesaNumero,valor} = req.body
+  db.get("SELECT id FROM mesas WHERE numero = ?", [mesaNumero], (err,id) =>{
+    if(err){
+      console.log("Erro ao recuperar id da mesa ! ")
+    }
+    db.get("SELECT parcial FROM pedidos WHERE mesa_id = ? ", [id.id], (err,result) =>{
+      if(err){
+      console.log("Erro ao recuperar parcial da mesa ! ")
+      }
+      if(result){
+        db.run("UPDATE pedidos SET parcial = ? WHERE mesa_id = ?", [valor,id.id], (err,success) =>{
+          if(err){
+            res.json({error: "Erro ao atualizar o parcial"})
+          }
+          res.json({success: "Sucesso ao atualizar a parcial "})
+        })
+      }      
+    })
+  })  
+})
 
 /*Imprimi Produto0 */
-async function dispararImpressao(mesa_id, itens, func) {
+async function dispararImpressao(mesa_numero, itens, func) {
   // let printer = new ThermalPrinter({
   //   type: Types.EPSON,
   //   interface: './simulacao_cupom.txt',
@@ -278,14 +327,13 @@ async function dispararImpressao(mesa_id, itens, func) {
   
 
   try {
-    const linha     = "=".repeat(42);
-    const linhafina = "-".repeat(42);
+    const linha     = "=".repeat(21);
+    const linhafina = "-".repeat(21);
 
     // ── CABEÇALHO ──
     printer.alignCenter();
-    printer.bold(true);
-    printer.println(linha);
-    printer.setTextSize(2, 1);
+    printer.bold(false);
+    printer.setTextSize(1, 1);
     printer.println("NOVO PEDIDO");
     printer.setTextSize(1, 1);
     printer.println(linha);
@@ -295,8 +343,8 @@ async function dispararImpressao(mesa_id, itens, func) {
     // ── INFO ──
     printer.alignLeft();
     printer.bold(true);
-    printer.setTextSize(1, 2);
-    printer.println(`MESA: ${mesa_id}`);
+    printer.setTextSize(1, 1);
+    printer.println(`MESA: ${mesa_numero}`);
     printer.setTextSize(1, 1);
     printer.bold(false);
     printer.println(`HORA: ${new Date().toLocaleTimeString('pt-BR')}`);
@@ -309,7 +357,7 @@ async function dispararImpressao(mesa_id, itens, func) {
       // nome + quantidade em tamanho grande
       printer.alignLeft();
       printer.bold(true);
-      const nome = (item.nome || 'PRODUTO').substring(0, 16).toUpperCase();
+      const nome = (item.nome || 'Produto').substring(0, 24).toUpperCase();
       const qtd  = `x${item.quantidade || 1}`;
       printer.println(`${nome.padEnd(18)}${qtd}`);
       printer.bold(false);
@@ -353,12 +401,6 @@ async function dispararImpressao(mesa_id, itens, func) {
     });
 
     // ── RODAPÉ ──
-    printer.alignCenter();
-    printer.println(`TOTAL DE ITENS: ${itens.length}`);
-    printer.println(linha);
-    printer.newLine();
-    printer.newLine();
-    printer.newLine();
     printer.newLine();
     printer.cut();
 
@@ -377,7 +419,7 @@ async function dispararImpressao(mesa_id, itens, func) {
 app.post("/add-multi-products", verifyToken ,  (req, res) => {
     const idLoja = req.user.idLoja;
     const funcionario = req.user.nome;
-    const { mesa_id,mesa_numero,precoFinal, itens} = req.body;
+    const { mesa_id,mesa_numero,itens} = req.body;
 
     if (!itens || itens.length === 0) {
         return res.status(400).json({ error: "Carrinho vazio" });
@@ -404,12 +446,12 @@ app.post("/add-multi-products", verifyToken ,  (req, res) => {
                     db.run("UPDATE pedidos SET quantidade = ? WHERE id = ? AND idLoja = ?", [novaQtd, row.id, idLoja]);
                 } else {
                     const sqlInsert = "INSERT INTO pedidos (mesa_id,mesa_numero,func,produto_id,idLoja, quantidade,status,extras,desc, hora,preco) VALUES (?,?,?, ?, ?, ?, ?, ?, ? , ?,?)";
-                    db.run(sqlInsert, [mesa_id,mesa_numero,funcionario, item.id,idLoja , item.quantidade,'aberto',item.extras,item.obs, new Date().toISOString(),precoFinal]);
+                    db.run(sqlInsert, [mesa_id,mesa_numero,funcionario, item.id,idLoja , item.quantidade,'aberto',item.extras,item.obs, new Date().toISOString(),item.preco]);
                 }
             });
         });
     });
-    dispararImpressao(mesa_id,itens,req.user.nome)
+    dispararImpressao(mesa_numero,itens,req.user.nome)
 
     res.json({ success: true, message: "Pedido processado com sucesso!" });
 });
@@ -470,6 +512,47 @@ app.post("/mesa/alterar/:mesa_id", verifyToken, async (req,res) => {
     })
   })
 })
+
+// ── Atualiza Produto  ──
+app.put('/produto/:id', verifyToken, upload.single('imagem'), (req, res) => {
+  const { nome, preco, descricao, categoria, extras } = req.body;
+  const idLoja = req.user.idLoja;
+
+  const campos  = ['nome = ?', 'preco = ?', 'descricao = ?', 'categoria = ?', 'extras = ?'];
+  const valores = [nome, preco, descricao, categoria, extras];
+
+  // só atualiza img se enviou uma nova
+  if (req.file) {
+    campos.push('img = ?');
+    valores.push(`${idLoja}/${req.file.filename}`);
+  }
+
+  valores.push(req.params.id);
+
+  db.run(
+    `UPDATE produtos SET ${campos.join(', ')} WHERE id = ?`,
+    valores,
+    function(err) {
+      if (err) return res.status(500).json({ message: err.message });
+      if (this.changes === 0) return res.status(404).json({ message: 'Produto não encontrado' });
+      return res.json({ ok: true });
+    }
+  );
+});
+
+app.delete('/produto/:id', verifyToken, (req, res) => {
+  const idLoja = req.user.idLoja;
+
+  db.run(
+    'DELETE FROM produtos WHERE id = ? AND idLoja = ?',
+    [req.params.id, idLoja],
+    function(err) {
+      if (err) return res.status(500).json({ message: err.message });
+      if (this.changes === 0) return res.status(404).json({ message: 'Produto não encontrado' });
+      return res.json({ ok: true });
+    }
+  );
+});
 /* Pega os produtos existentes na mesa */
 
 app.get ("/mesa/:id/products/:mesa_id", (req,res) =>{
@@ -527,7 +610,17 @@ app.get("/impressao/:mesa_id", async (req, res) => {
     }
 });
 
+function normalizarExtras(extras) {
+    if (!extras) return [];
 
+    if (Array.isArray(extras)) return extras;
+
+    try {
+        return JSON.parse(extras);
+    } catch {
+        return [];
+    }
+}
 
 
 
@@ -558,19 +651,17 @@ app.post("/imprimir-comando", async (req, res) => {
         return res.status(500).json({ error: "Falha ao instanciar a impressora." });
     }
     try {
-  const linha    = "=".repeat(42);
-  const linhafina = "-".repeat(42);
+  const linha    = "=".repeat(21);
+  const linhafina = "-".repeat(21);
 
   // ── CABEÇALHO ──
   printer.alignCenter();
-  printer.bold(true);
+  printer.bold(false);
   printer.setTextSize(1, 1);
   printer.println(linha);
-  printer.setTextSize(1 v
-    , 1);
-  printer.println("BURCAS");
+  printer.println("BURCA'S");
   printer.println("LANCHONETE");
-  printer.setTextSize(1, 1);
+  printer.println("CNPJ: 38.352.394-0001/10")
   printer.println(linha);
   printer.bold(false);
 
@@ -593,7 +684,12 @@ app.post("/imprimir-comando", async (req, res) => {
   let total = 0;
 
   itens.forEach(item => {
-    const subtotal = item.preco * item.quantidade;
+    const totalExtras = normalizarExtras(item.extras)
+    .reduce((acc, e) => acc + (Number(e.preco) || 0), 0);
+    const precoFinal = item.preco;
+
+    const subtotal = precoFinal * item.quantidade;
+
     total += subtotal;
 
     const nome     = (item.nome || 'PRODUTO').substring(0, 20).toUpperCase().padEnd(20);
@@ -627,7 +723,7 @@ app.post("/imprimir-comando", async (req, res) => {
     // ── TOTAIS ──
     printer.println(linha);
     printer.alignRight();
-    printer.bold(true);
+    printer.bold(false);
     printer.println(`TOTAL: R$ ${total.toFixed(2)}`);
     printer.bold(false);
     printer.println(`Dividido 2x: R$ ${(total / 2).toFixed(2)} p/ pessoa`);
@@ -639,10 +735,6 @@ app.post("/imprimir-comando", async (req, res) => {
     printer.println("Obrigado pela preferencia!");
     printer.println("Volte sempre :)");
     printer.println(" ");
-
-    printer.newLine();
-    printer.newLine();
-    printer.newLine();
     printer.cut();
 
     const success = await printer.execute();

@@ -81,6 +81,7 @@
           <div class="stat-value" id="stat-usuarios">—</div>
           <div class="stat-label">Usuários</div>
         </div>
+        
       </div>
 
       <div class="card">
@@ -91,6 +92,7 @@
           <button class="btn btn-outline" onclick="showPanel('produtos', null)">🍔 Gerenciar produtos</button>
           <button class="btn btn-outline" onclick="showPanel('usuarios', null)">👥 Gerenciar usuários</button>
           <button class="btn btn-outline" onclick="window.location.href='/cadastro_produto.html'">➕ Novo produto</button>
+          <button class="btn btn-outline" onclick="fazerBackupManual()">💾 Fazer Backup</button>
         </div>
       </div>
     </div>
@@ -297,6 +299,22 @@
           <option value="bebidas">🥤 Bebidas</option>
           <option value="sobremesas">🍰 Sobremesas</option>
         </select>
+      </div>
+      <div class="field">
+        <label>Imagem atual</label>
+        <div id="edit-img-preview" style="
+          width:100%;height:120px;
+          background:var(--card-bg2);
+          border:1.5px solid var(--card-border);
+          border-radius:var(--radius-sm);
+          display:flex;align-items:center;justify-content:center;
+          overflow:hidden;margin-bottom:8px;cursor:pointer;
+          transition:border-color var(--transition)
+        " onclick="document.getElementById('edit-img-input').click()">
+          <img id="edit-img-atual" style="width:100%;height:100%;object-fit:cover;display:none">
+          <span id="edit-img-placeholder" style="color:var(--texto-hint);font-size:13px">📷 Clique para trocar a imagem</span>
+        </div>
+        <input type="file" id="edit-img-input" accept="image/*" style="display:none" onchange="previewEditImg()">
       </div>
       <div class="field">
         <label>Extras</label>

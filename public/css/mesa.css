@@ -459,8 +459,9 @@ header {
   align-items: center;
   justify-content: center;
   z-index: 999;
-  backdrop-filter: blur(4px);
+  overflow: hidden; /* 🔥 impede scroll do body */
 }
+
 
 .modal-content {
   background: var(--card-bg);
@@ -470,6 +471,9 @@ header {
   border: 1.5px solid var(--card-border);
   box-shadow: var(--shadow-lg);
   animation: modalOpen 0.2s ease;
+  max-height: 90vh;  /* 🔥 limita altura */
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes modalOpen {
@@ -488,6 +492,8 @@ header {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  overflow-y: auto; 
+  max-height: calc(90vh - 200px);
 }
 
 .modal-body h2 {
@@ -539,6 +545,8 @@ header {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  max-height: 150px;
+  overflow-y: auto;
 }
 
 .extra-item {
@@ -1033,11 +1041,36 @@ textarea:focus { border-color: var(--amarelo); }
 ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: #333; }
 
+
+.alert-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  overflow: hidden; 
+}
+.selection-main {
+  flex: 2;
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  height: 100%;
+}
+
+.products {
+  overflow-y: auto; /* 🔥 aqui acontece o scroll */
+  height: 100%;
+}
+
 /* ── RESPONSIVO ── */
 @media (max-width: 768px) {
+
   .sidebar{
     background-color: var(--card-bg);
   }
+
   .nav { display: none; }
   .menu-btn { display: block; }
 
@@ -1046,36 +1079,76 @@ textarea:focus { border-color: var(--amarelo); }
     padding: 5px;
   }
 
-  .modal-layout { flex-direction: column; }
-
+  /* 🔥 MODAL PRINCIPAL */
   .product-box.selection-box {
-    height: 95vh;
-    width: 95%;
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* impede scroll da página */
   }
 
+  /* 🔥 LAYOUT INTERNO */
+  .modal-layout {
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* 🔥 LISTA DE PRODUTOS (parte de cima) */
+  .selection-main {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  /* 🔥 CARRINHO (parte de baixo) */
   .selection-cart {
-    min-width: 100%;
-    height: 240px;
+    flex: 0 0 auto;
+    max-height: 40%;
+    overflow-y: auto;
+
     border-left: none;
     border-top: 1.5px solid var(--card-border);
+
+    background: var(--card-bg);
+    z-index: 2;
   }
 
+  /* 🔥 LISTA DO CARRINHO */
+  .cart-items-preview {
+    overflow-y: auto;
+    max-height: 200px;
+  }
+
+  /* BOTÕES */
   .btn-fechar {
     width: 100%;
     justify-content: center;
   }
 
-  .mesa-info { padding: 0 16px; margin: 20px auto; }
+  .mesa-info { 
+    padding: 0 16px; 
+    margin: 20px auto; 
+  }
 
-  .checkout-box { margin: 20px 0; }
+  .checkout-box { 
+    margin: 20px 0; 
+  }
+
   .footer-buttons{
     display: flex;
     flex-direction: column;
     gap: 5px;
   }
 
-  .products { grid-template-columns: repeat(2, 1fr); }
-  .product-box { grid-template-columns: 110px 1fr; }
+  .products { 
+    grid-template-columns: repeat(2, 1fr); 
+  }
+
+  .product-box { 
+    grid-template-columns: 110px 1fr; 
+  }
 }
 
 @media (max-width: 480px) {

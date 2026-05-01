@@ -1,4 +1,45 @@
 
+let isAdmin = false;
+
+
+async function aplicarNomeeLogo(){
+    try{
+        const req = await fetch('/lojasInfo')
+        const res = await req.json()
+        if(res[0].nomeLoja && !res[0].logo){
+            const nome = document.getElementById("nomeLoja")
+            nome.innerHTML =  '🍔 ' + res[0].nomeLoja
+        }
+        //Falta finalizar essa parte da logo !!!!!!!!
+        else if(res[0].nomeLoja && res[0].logo){
+            const nome = document.getElementById("nomeLoja")
+            nome.innerHTML =  '🍔 ' + res[0].nomeLoja
+        }
+    }
+    catch(error){
+        console.log(error)
+    }
+}
+
+async function isadmin(){
+    const req = await fetch('/dashboard')
+    const res = await req.json()
+    if(res.error){
+        window.location.href = "login.html"
+        console.log('rodando')
+    }
+    console.log(res)
+
+    if(res.role === 'admin'){
+        isAdmin = true
+        carregarHistorico(1)
+        aplicarNomeeLogo()
+    }
+}
+
+
+window.onload = isadmin;
+
 function toggleMenu(){
 
 const sidebar = document.getElementById("sidebar")
@@ -24,6 +65,7 @@ async function carregarHistorico(dias, elemento) {
         pedidos.forEach(async pedido => {
             const req = await fetch(`getprodutobody/${pedido.produto_id}`)
             const product_body = await req.json()
+            const extras = pedido.extras
             const dataFormatada = new Date(pedido.hora).toLocaleString('pt-BR');
 
             container.innerHTML += `
@@ -31,8 +73,9 @@ async function carregarHistorico(dias, elemento) {
                     <span class="data-hora">${dataFormatada}</span>
                     <span class="num-mesa">Mesa ${pedido.mesa_id}</span>
                     <span class="nome-prod">${product_body.nome}</span>
+                    <span class="extras-prod">${extras} </span>
                     <span class="item-qtd">${pedido.quantidade}</span>
-                    <span class="status-badge ${product_body.status}">${pedido.status}</span>
+                    <span class="func">${pedido.func}</span>
                 </div>
             `;
         });
@@ -40,6 +83,3 @@ async function carregarHistorico(dias, elemento) {
         console.error("Erro ao carregar histórico:", err);
     }
 }
-
-// Chama a função ao carregar a página
-window.onload = carregarHistorico(1);

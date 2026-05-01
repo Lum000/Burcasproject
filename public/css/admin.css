@@ -698,6 +698,17 @@
     letter-spacing: 0.5px;
     }
 
+    /* ── MODAL SCROLL ── */
+    .modal-overlay.open {
+      overflow-y: auto;
+    }
+
+    .modal-box {
+      max-height: 90vh;
+      overflow-y: auto;
+      overscroll-behavior: contain; /* ← impede scroll da página por baixo */
+    }
+
     .role-admin   { background: rgba(255,212,0,0.1);  color: var(--amarelo);      border: 1px solid rgba(255,212,0,0.25); }
     .role-user    { background: rgba(136,136,136,0.1); color: var(--texto-muted);  border: 1px solid rgba(136,136,136,0.2); }
     .role-cozinha { background: rgba(0,201,122,0.1);   color: var(--verde);        border: 1px solid rgba(0,201,122,0.25); }
@@ -712,6 +723,15 @@
 
     /* ── RESPONSIVO ── */
     @media (max-width: 768px) {
+      .modal-overlay.open {
+        overflow-y: auto;
+      }
+
+      .modal-box {
+        max-height: 90vh;
+        overflow-y: auto;
+        overscroll-behavior: contain; /* ← impede scroll da página por baixo */
+      }
       .sidebar { display: none; }
       .main { margin-left: 0; }
       .content { padding: 20px 16px; }
