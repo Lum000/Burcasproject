@@ -487,6 +487,48 @@ header {
   object-fit: cover;
 }
 
+.qty_class {
+  display: flex;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.qty_class label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texto-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.qty_class input {
+  width: 64px;
+  padding: 9px 10px;
+  text-align: center;
+  color: var(--texto);
+  background: var(--card-bg2);
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  outline: none;
+  transition: border-color var(--transition);
+  -moz-appearance: textfield; 
+}
+
+.qty_class input:focus {
+  border-color: var(--amarelo);
+}
+
+.qty_class input::-webkit-outer-spin-button,
+.qty_class input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
 .modal-body {
   padding: 20px;
   display: flex;

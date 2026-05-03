@@ -297,14 +297,24 @@ app.post("/pagaparcial" , async (req,res) =>{
       if(err){
       console.log("Erro ao recuperar parcial da mesa ! ")
       }
-      if(result){
+      if(result.parcial === null){
         db.run("UPDATE pedidos SET parcial = ? WHERE mesa_id = ?", [valor,id.id], (err,success) =>{
           if(err){
             res.json({error: "Erro ao atualizar o parcial"})
           }
           res.json({success: "Sucesso ao atualizar a parcial "})
         })
-      }      
+      }
+
+      if(result.parcial){
+        const resultBase = result.parcial + valor
+        db.run("UPDATE pedidos SET parcial = ? WHERE mesa_id = ?", [resultBase,id.id], (err,success) =>{
+          if(err){
+            res.json({error: "Erro ao atualizar o parcial"})
+          }
+          res.json({success: "Sucesso ao atualizar a parcial "})
+        })
+      }    
     })
   })  
 })
@@ -326,89 +336,83 @@ async function dispararImpressao(mesa_numero, itens, func) {
   });
   
 
-  try {
-    const linha     = "=".repeat(21);
-    const linhafina = "-".repeat(21);
+try {
+  const linha     = "=".repeat(21);
+  const linhafina = "-".repeat(21);
 
-    // ── CABEÇALHO ──
-    printer.alignCenter();
-    printer.bold(false);
-    printer.setTextSize(1, 1);
-    printer.println("NOVO PEDIDO");
-    printer.setTextSize(1, 1);
-    printer.println(linha);
-    printer.bold(false);
+  printer.alignCenter();
+  printer.bold(true);
+  printer.setTextSize(1, 1);
+  printer.println("NOVO PEDIDO");
+  printer.println(linha);
+  printer.bold(false);
 
+  printer.alignLeft();
+  printer.bold(true);
+  printer.println(`MESA: ${mesa_numero}`);
+  printer.bold(false);
+  printer.println(`HORA: ${new Date().toLocaleTimeString('pt-BR')}`);
+  printer.println(`OPER: ${func || '—'}`);
+  printer.println(linhafina);
 
-    // ── INFO ──
+  itens.forEach(item => {
     printer.alignLeft();
     printer.bold(true);
     printer.setTextSize(1, 1);
-    printer.println(`MESA: ${mesa_numero}`);
-    printer.setTextSize(1, 1);
+
+    const nome = (item.nome || 'PRODUTO').substring(0, 16).toUpperCase();
+    const qtd  = `x${item.quantidade || 1}`;
+    printer.println(qtd);
+    printer.println(nome);
+
     printer.bold(false);
-    printer.println(`HORA: ${new Date().toLocaleTimeString('pt-BR')}`);
-    printer.println(`OPER: ${func || '—'}`);
-    printer.println(linhafina);
 
-    // ── ITENS ──
-    itens.forEach(item => {
-
-      // nome + quantidade em tamanho grande
-      printer.alignLeft();
-      printer.bold(true);
-      const nome = (item.nome || 'Produto').substring(0, 24).toUpperCase();
-      const qtd  = `x${item.quantidade || 1}`;
-      printer.println(`${nome.padEnd(18)}${qtd}`);
-      printer.bold(false);
-
-      // ── EXTRAS ──
-      try {
-        const extrasRaw = item.extras;
+    try {
+      const extrasRaw = item.extras;
       if (extrasRaw) {
         let lista = [];
 
         try {
-          // tenta parsear como JSON primeiro
-          const parsed = JSON.parse(extrasRaw);
+          const parsed = typeof extrasRaw === 'string' ? JSON.parse(extrasRaw) : extrasRaw;
           lista = Array.isArray(parsed) ? parsed : [];
         } catch {
-          // se não for JSON, divide por vírgula
-          lista = extrasRaw
+          lista = String(extrasRaw)
             .split(',')
             .map(e => e.trim())
             .filter(e => e && e !== 'Sem adicionais');
         }
 
         if (lista.length > 0) {
-          printer.println(' ADICIONAIS:');
+          printer.bold(true);
+          printer.println("ADICIONAIS:");
+          printer.bold(false);
+
           lista.forEach(e => {
-            // suporta tanto objeto {nome, preco} quanto string simples
             const nomeExtra = typeof e === 'object' ? e.nome : e;
-            printer.println(`  + ${nomeExtra.toUpperCase()}`);
+            printer.println(`+ ${nomeExtra.toUpperCase()}`);
           });
         }
       }
-      } catch {}
+    } catch {}
 
-      // ── OBS ──
-      const obs = (item.obs || item.desc || '').trim().toUpperCase();
-      if (obs) {
-        printer.println(` OBS: ${obs}`);
-      }
+    const obs = (item.obs || item.desc || '').trim();
+    if (obs) {
+      printer.bold(true);
+      printer.println("OBS:");
+      printer.bold(false);
+      printer.println(obs.toUpperCase());
+    }
 
-      printer.println(linhafina);
-    });
+    printer.println(linhafina);
+  });
 
-    // ── RODAPÉ ──
-    printer.newLine();
-    printer.cut();
+  printer.newLine();
+  printer.cut();
 
-    await printer.execute();
-    console.log("Pedido enviado para a cozinha!");
-  } catch (error) {
-    console.error("Erro na impressora:", error);
-  }
+  await printer.execute();
+} catch (error) {
+  console.error("Erro na impressora:", error);
+}
 }
 
 /*Alterar Dados da Loja */
@@ -628,7 +632,7 @@ const ThermalPrinter = require("node-thermal-printer").printer;
 const Types = require("node-thermal-printer").types;
 
 app.post("/imprimir-comando", async (req, res) => {
-    const { mesa_id, itens } = req.body;
+    const { mesa_id, itens, parcial } = req.body;
 
     // Inicialização segura
     // let printer = new ThermalPrinter({
@@ -656,20 +660,15 @@ app.post("/imprimir-comando", async (req, res) => {
 
   // ── CABEÇALHO ──
   printer.alignCenter();
-  printer.bold(false);
-  printer.setTextSize(1, 1);
   printer.println(linha);
   printer.println("BURCA'S");
   printer.println("LANCHONETE");
   printer.println("CNPJ: 38.352.394-0001/10")
   printer.println(linha);
-  printer.bold(false);
 
   // ── INFO DA MESA ──
   printer.alignLeft();
   printer.println(`MESA  : ${mesa_id}`);
-  printer.println(`DATA  : ${new Date().toLocaleString('pt-BR')}`);
-  printer.println(`OPER. : ${itens[0]?.func || '—'}`);
   printer.println(linhafina);
 
   // ── CABEÇALHO DAS COLUNAS ──
@@ -682,51 +681,82 @@ app.post("/imprimir-comando", async (req, res) => {
 
   // ── ITENS ──
   let total = 0;
+  let totalComParcial = 0;
 
-  itens.forEach(item => {
-    const totalExtras = normalizarExtras(item.extras)
-    .reduce((acc, e) => acc + (Number(e.preco) || 0), 0);
-    const precoFinal = item.preco;
 
-    const subtotal = precoFinal * item.quantidade;
+    itens.forEach((item, index) => {
+      printer.bold(true)
 
-    total += subtotal;
+      const extras = normalizarExtras(item.extras);
 
-    const nome     = (item.nome || 'PRODUTO').substring(0, 20).toUpperCase().padEnd(20);
-    const qtd      = `x${item.quantidade}`.padEnd(5);
-    const unit     = `R$${parseFloat(item.preco).toFixed(2)}`.padStart(7);
-    const totalStr = `R$${subtotal.toFixed(2)}`.padStart(8);
+      // 💰 Soma extras corretamente
+      const totalExtras = extras.reduce((acc, e) => {
+        const preco = Number(String(e.preco).replace(",", ".")) || 0;
+        return acc + preco;
+      }, 0);
 
-    printer.println(`${nome}${qtd}${unit}${totalStr}`);
+      // 💰 Preço base seguro (caso venha null/string)
+      const precoBase = Number(
+        String(item.preco ?? item.precoBase ?? 0).replace(",", ".")
+      );
 
-    // ── EXTRAS ──
-      try {
-        const extras = typeof item.extras === 'string' ? JSON.parse(item.extras) : item.extras;
-        if (Array.isArray(extras) && extras.length > 0) {
-          extras.forEach(e => {
-            const nomeExtra  = `  + ${e.nome}`.padEnd(25);
-            const precoExtra = `R$${parseFloat(e.preco).toFixed(2)}`.padStart(15);
-            printer.println(`${nomeExtra}${precoExtra}`);
-          });
-        }
-      } catch {}
+      // 💰 Preço final correto (AGORA SIM)
+      const precoFinal = precoBase + totalExtras;
 
-      // ── OBS ──
-      const obs = (item.desc || item.obs || '').trim();
-      if (obs) {
-        printer.println(`  >> OBS: ${obs.toUpperCase()}`);
+      // 💰 Subtotal correto
+      const subtotal = precoFinal * item.quantidade;
+
+      total += subtotal;
+
+      // 💳 parcial
+      if (parcial > 0) {
+        totalComParcial = total - parcial;
       }
 
-      printer.println(linhafina);
+      // 🧾 Linha principal (compacta)
+      const nome = (item.nome || 'PRODUTO')
+        .substring(0, 20)
+        .toUpperCase()
+        .padEnd(20);
+
+      const qtd = `x${item.quantidade}`.padEnd(5);
+      const unit = `R$${precoFinal.toFixed(2)}`.padStart(7); // 👈 agora correto
+      const totalStr = `R$${subtotal.toFixed(2)}`.padStart(8);
+
+      printer.println(`${nome}${qtd}${unit}${totalStr}`);
+
+      // ➕ Extras (compactado em 1 linha)
+      if (extras.length > 0) {
+        const extrasTexto = extras.map(e => e.nome).join(", ");
+        printer.println(` + ${extrasTexto}`);
+      }
+
+      const obs = (item.desc || item.obs || '').trim();
+      if (obs) {
+        printer.println(` >> ${obs.toUpperCase()}`);
+      }
+
+      // 🔻 separador só entre itens
+      if (index !== itens.length - 1) {
+        printer.println("-");
+      }
+
     });
 
     // ── TOTAIS ──
     printer.println(linha);
     printer.alignRight();
-    printer.bold(false);
-    printer.println(`TOTAL: R$ ${total.toFixed(2)}`);
-    printer.bold(false);
-    printer.println(`Dividido 2x: R$ ${(total / 2).toFixed(2)} p/ pessoa`);
+    if(parcial > 0){
+      printer.println(`TOTAL: R$ ${total.toFixed(2)}`);
+      printer.println(`Pago Parcial: R$ ${parcial.toFixed(2)}`)
+      printer.println(`Resto: R$ ${totalComParcial.toFixed(2)}`);
+      printer.println(`Dividido 2x: R$ ${(totalComParcial / 2).toFixed(2)} p/ pessoa`);
+    }
+    else{
+      printer.println(`TOTAL: R$ ${total.toFixed(2)}`);
+      printer.bold(false);
+      printer.println(`Dividido 2x: R$ ${(total / 2).toFixed(2)} p/ pessoa`);
+    }
     printer.println(linha);
 
     // ── RODAPÉ ──
@@ -831,10 +861,39 @@ app.get("/getprodutobody/:productid",(req,res)=>{
     }
   })
 })
+// via número da mesa
+app.get('/getParcial/:mesa', (req, res) => {
+  db.get(
+    `SELECT SUM(parcial) as total 
+     FROM pedidos 
+     WHERE mesa_id = (SELECT id FROM mesas WHERE numero = ?) 
+     AND status = 'aberto'`,
+    [req.params.mesa],
+    (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ total: row?.total || 0 });
+    }
+  );
+});
+
+// via id da mesa
+app.get('/getParcialId/:mesa_id', (req, res) => {
+  db.get(
+    `SELECT SUM(parcial) as total 
+     FROM pedidos 
+     WHERE mesa_id = ? 
+     AND status = 'aberto'`,
+    [req.params.mesa_id],
+    (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ total: row?.total || 0 });
+    }
+  );
+});
 
 app.get("/getExtras/:pedido_id", (req, res) => {
   db.get(
-    "SELECT id,extras, desc,preco FROM pedidos WHERE id = ?",
+    "SELECT id,extras, desc,preco,parcial FROM pedidos WHERE id = ?",
     [req.params.pedido_id],
     (err, row) => {
       if (err) return res.status(500).json({ error: err.message });

@@ -1,4 +1,5 @@
 let isAdmin = false;
+let totalGeral = 0;
 
 async function mostrarSkeleton(quantidade = 3) {
   const divPedidos = document.querySelector('.pedidos');
@@ -52,9 +53,7 @@ async function isadmin(){
     const res = await req.json()
     if(res.error){
         window.location.href = "login.html"
-        console.log('rodando')
     }
-    console.log(res)
 
     if(res.role === 'admin'){isAdmin = true}
     togleAdmin()
@@ -117,6 +116,22 @@ function showToast(message,error){
 
 }
 
+async function getParcial(mesa, mesa_id) {
+  try {
+    if (mesa) {
+      const req = await fetch(`/getParcial/${mesa}`);
+      const res = await req.json();
+      return res?.total || 0; 
+    } else {
+      const req = await fetch(`/getParcialId/${mesa_id}`);
+      const res = await req.json();
+      return res?.total || 0;
+    }
+  } catch {
+    return 0;
+  }
+}
+
 
 async function getProducts(id, mesa) {
 
@@ -138,7 +153,8 @@ async function getProducts(id, mesa) {
     await mostrarSkeleton(4)
 
     divPedidos.innerHTML = '<h2>Pedidos</h2>';
-    let totalGeral = 0;
+    totalGeral = 0;
+    let parcialValor = 0;
 
     const listaItens = document.createElement('div');
     listaItens.className = 'lista-itens-scroll';
@@ -166,7 +182,6 @@ async function getProducts(id, mesa) {
         }
         const obsTexto    = dadosObs.desc   || '';
         const precoExtra = dadosObs.preco || '';
-        console.log("preco " + precoExtra +"prodito" + item.id)
 
         totalGeral += precoExtra * item.quantidade;
         
@@ -192,24 +207,50 @@ async function getProducts(id, mesa) {
     }
     const footer = document.createElement("div");
     footer.className = "pedido-footer";
-    footer.innerHTML = `
-        <div class="total" style="margin-top: 20px; font-weight: bold; font-size: 1.2rem;">
-            Total: <span> R$ ${totalGeral.toFixed(2)} </span> 
-        </div>
-        <br>
-        <div class="footer-buttons" style="display: flex; gap: 10px;">
-            <button class="btn-adicionar" onclick="openAdd()">
-                <span class="icon">+</span> Adicionar
-            </button>
-            <button class="btn-fechar" onclick="openCheckout(${id}, ${mesa})">
-                <span>✅</span> Fechar Comanda
-            </button>
-            <button class="btn-imprimir" onclick="prepararImpressao(${id})">
-                <span>🖨️</span> Imprimir
-            </button>
-        </div>
-    `;
-    divPedidos.appendChild(footer);
+    parcialValor = await getParcial(mesa,null)
+    const totalPagamento = totalGeral - Number(parcialValor);
+    if(parcialValor > 0){
+        footer.innerHTML = `
+            <div class="total" style="margin-top: 20px; font-weight: bold; font-size: 1.2rem;">
+            Total da Mesa: <span style="color: yellow"> R$ ${totalGeral.toFixed(2)} </span> <br>
+            Parcial Pago : <span style="color:red"> R$ ${parcialValor.toFixed(2)}</span> <br>
+            Total Após Pagamento : <span> R$ ${totalPagamento.toFixed(2)} </span>
+            </div>
+            <br>
+            <div class="footer-buttons" style="display: flex; gap: 10px;">
+                <button class="btn-adicionar" onclick="openAdd()">
+                    <span class="icon">+</span> Adicionar
+                </button>
+                <button class="btn-fechar" onclick="openCheckout(${id}, ${mesa})">
+                    <span>✅</span> Fechar Comanda
+                </button>
+                <button class="btn-imprimir" onclick="prepararImpressao(${id})">
+                    <span>🖨️</span> Imprimir
+                </button>
+            </div>
+        `;
+        divPedidos.appendChild(footer);
+        }
+    else{
+        footer.innerHTML = `
+            <div class="total" style="margin-top: 20px; font-weight: bold; font-size: 1.2rem;">
+            Total da Mesa: <span> R$ ${totalGeral.toFixed(2)} </span> <br>
+            </div>
+            <br>
+            <div class="footer-buttons" style="display: flex; gap: 10px;">
+                <button class="btn-adicionar" onclick="openAdd()">
+                    <span class="icon">+</span> Adicionar
+                </button>
+                <button class="btn-fechar" onclick="openCheckout(${id}, ${mesa})">
+                    <span>✅</span> Fechar Comanda
+                </button>
+                <button class="btn-imprimir" onclick="prepararImpressao(${id})">
+                    <span>🖨️</span> Imprimir
+                </button>
+            </div>
+        `;
+        divPedidos.appendChild(footer);
+    }
 }
 async function deletarItem(productid,mesaid) {
     try{
@@ -437,7 +478,7 @@ async function confirmarPedido(mesa_id) {
     }
 }
 
-function adicionarAoCarrinho(produtoId, nome, preco, obs, extrasSelecionados) {
+function adicionarAoCarrinho(produtoId, nome, preco, qty , obs, extrasSelecionados) {
     
     const extrasString = extrasSelecionados
     .map(e => e.nome)
@@ -452,17 +493,21 @@ function adicionarAoCarrinho(produtoId, nome, preco, obs, extrasSelecionados) {
     });
 
     if (indexExistente !== -1) {
-        // Se for exatamente igual, aumenta a quantidade
         carrinhoTemporario[indexExistente].quantidade += 1;
-    } else {
+    } 
+    if(qty > 0){
+        console.log(qty)
         carrinhoTemporario.push({ 
             id: produtoId, 
             nome: nome, 
             preco: preco + totalExtras,
-            quantidade: 1, 
+            quantidade: qty, 
             extras: JSON.stringify(extrasSelecionados),
             obs: obs 
         });
+    }
+    else{
+        showToast("Erro Sem Quantidade !",'red')
     }
 
     showToast();
@@ -626,20 +671,26 @@ function openProdModal(botao) {
     });
 
     const button = document.getElementById("addprod");
+
+
     button.onclick = function() {
         const obs = document.getElementById('modalObs').value.trim();
+        const qty = document.getElementById('qty_input');
+
         precoFinalComExtras = precoBase + valorExtrasAcumulado;
         
         // Passamos a lista de extras atual
         adicionarAoCarrinho(
             id,
             nome,
-            precoBase, 
+            precoBase,
+            qty.value,
             obs,
             [...listaExtras]
         );
         
         closeProdModal();
+        qty.value = 1;
     };
 }
 
@@ -662,10 +713,10 @@ function closeProdModal(){
 let valorTotalAtual = 0;
 
 function openCheckout(product_id,mesa_id) {
-    const totalTexto = document.querySelector(".total").innerText;
-    valorTotalAtual = parseFloat(totalTexto.replace("Total: R$ ", "").replace(",", "."));
+    valorTotalAtual = Number(totalGeral) || 0;
 
-    document.getElementById("valorTotalCheckout").innerText = `R$ ${valorTotalAtual.toFixed(2).replace(".", ",")}`;
+    document.getElementById("valorTotalCheckout").innerText =
+        `R$ ${valorTotalAtual.toFixed(2).replace(".", ",")}`;
     document.getElementById("modalFecharConta").style.display = "flex";
     toggleCheckoutOptions();
 }
@@ -694,6 +745,19 @@ async function processarPagamento() {
 
     if (tipo === "parcial") {
         valorPago = parseFloat(document.getElementById("valorParcial").value);
+                const parcialNome = document.getElementById('parcialNome').value
+
+        try{
+            if(parcialNome){
+                parcialValor.push({
+                    nome: parcialNome,
+                    valor: valorPago
+                })
+            }
+        }
+        catch(err){
+            console.log("erro na parcial " + err.message)
+        }
         if (!valorPago || valorPago <= 0 || valorPago > valorTotalAtual) {
             return alert("Insira um valor parcial válido.");
         }
@@ -709,7 +773,6 @@ async function processarPagamento() {
             })
         })
         const res =  await req.json()
-        console.log(res)
     }
     catch(err){
         console.log("Erro de pagamento parcial " + err.message)
@@ -725,6 +788,7 @@ async function prepararImpressao(mesa_id) {
     // 1. Busca os dados da mesa (o que você já fez)
     const req = await fetch(`/impressao/${mesa_id}`);
     const dadosMesa = await req.json();
+    const valorParcial = await getParcial(null, mesa_id)
 
     if (!dadosMesa || dadosMesa.length === 0) {
         return alert("Mesa vazia!");
@@ -737,7 +801,8 @@ async function prepararImpressao(mesa_id) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 mesa_id: mesa_id,
-                itens: dadosMesa
+                itens: dadosMesa,
+                parcial: valorParcial
             })
         });
 
