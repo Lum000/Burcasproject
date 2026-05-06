@@ -450,7 +450,6 @@ header {
   transform: translateX(-50%) translateY(0);
 }
 
-/* ── MODALS ── */
 .modal, .alert-overlay {
   position: fixed;
   inset: 0;
@@ -534,8 +533,8 @@ header {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  overflow-y: auto; 
-  max-height: calc(90vh - 200px);
+  overflow-y: auto;
+  flex: 1; 
 }
 
 .modal-body h2 {
@@ -587,8 +586,7 @@ header {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 150px;
-  overflow-y: auto;
+
 }
 
 .extra-item {

@@ -50,7 +50,8 @@ db.serialize(() => {
       numero INTEGER UNIQUE,
       status TEXT,
       idLoja TEXT NOT NULL,
-      qty INTEGER
+      qty INTEGER,
+      parcial NUMBER DEFAULT 0
     )
   `)
 
@@ -287,37 +288,37 @@ app.get ("/mesa/:id",(req,res)=>{
     })
 })
 
-app.post("/pagaparcial" , async (req,res) =>{
-  const {mesaNumero,valor} = req.body
-  db.get("SELECT id FROM mesas WHERE numero = ?", [mesaNumero], (err,id) =>{
-    if(err){
-      console.log("Erro ao recuperar id da mesa ! ")
-    }
-    db.get("SELECT parcial FROM pedidos WHERE mesa_id = ? ", [id.id], (err,result) =>{
-      if(err){
-      console.log("Erro ao recuperar parcial da mesa ! ")
-      }
-      if(result.parcial === null){
-        db.run("UPDATE pedidos SET parcial = ? WHERE mesa_id = ?", [valor,id.id], (err,success) =>{
-          if(err){
-            res.json({error: "Erro ao atualizar o parcial"})
-          }
-          res.json({success: "Sucesso ao atualizar a parcial "})
-        })
-      }
+app.post("/pagaparcial", async (req, res) => {
+  const { mesaNumero, valor } = req.body;
 
-      if(result.parcial){
-        const resultBase = result.parcial + valor
-        db.run("UPDATE pedidos SET parcial = ? WHERE mesa_id = ?", [resultBase,id.id], (err,success) =>{
-          if(err){
-            res.json({error: "Erro ao atualizar o parcial"})
+  if (!mesaNumero || !valor || valor <= 0) {
+    return res.status(400).json({ error: 'Dados inválidos' });
+  }
+
+  db.get("SELECT id FROM mesas WHERE numero = ?", [mesaNumero], (err, mesa) => {
+    if (err || !mesa) return res.status(404).json({ error: 'Mesa não encontrada' });
+
+    db.get(
+      "SELECT SUM(parcial) as totalParcial FROM pedidos WHERE mesa_id = ? AND status = 'aberto'",
+      [mesa.id],
+      (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        const parcialAtual = Number(result?.totalParcial || 0);
+        const novoParcial  = parcialAtual + Number(valor);
+
+        db.run(
+          "UPDATE mesas SET parcial = ? WHERE id = ?",
+          [novoParcial, mesa.id],
+          function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            return res.json({ success: true, parcial: novoParcial });
           }
-          res.json({success: "Sucesso ao atualizar a parcial "})
-        })
-      }    
-    })
-  })  
-})
+        );
+      }
+    );
+  });
+});
 
 /*Imprimi Produto0 */
 async function dispararImpressao(mesa_numero, itens, func) {
@@ -864,10 +865,9 @@ app.get("/getprodutobody/:productid",(req,res)=>{
 // via número da mesa
 app.get('/getParcial/:mesa', (req, res) => {
   db.get(
-    `SELECT SUM(parcial) as total 
-     FROM pedidos 
-     WHERE mesa_id = (SELECT id FROM mesas WHERE numero = ?) 
-     AND status = 'aberto'`,
+    `SELECT parcial as total 
+     FROM mesas 
+     WHERE id = (SELECT id FROM mesas WHERE numero = ?)`,
     [req.params.mesa],
     (err, row) => {
       if (err) return res.status(500).json({ error: err.message });
@@ -879,10 +879,9 @@ app.get('/getParcial/:mesa', (req, res) => {
 // via id da mesa
 app.get('/getParcialId/:mesa_id', (req, res) => {
   db.get(
-    `SELECT SUM(parcial) as total 
-     FROM pedidos 
-     WHERE mesa_id = ? 
-     AND status = 'aberto'`,
+    `SELECT parcial as total 
+     FROM mesas 
+     WHERE id = ? `,
     [req.params.mesa_id],
     (err, row) => {
       if (err) return res.status(500).json({ error: err.message });

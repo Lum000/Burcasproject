@@ -119,12 +119,14 @@ function showToast(message,error){
 async function getParcial(mesa, mesa_id) {
   try {
     if (mesa) {
-      const req = await fetch(`/getParcial/${mesa}`);
-      const res = await req.json();
-      return res?.total || 0; 
+        const req = await fetch(`/getParcial/${mesa}`);
+        const res = await req.json();
+        console.log(res)
+        return res?.total || 0; 
     } else {
       const req = await fetch(`/getParcialId/${mesa_id}`);
       const res = await req.json();
+      console.log(res.total)
       return res?.total || 0;
     }
   } catch {
@@ -132,7 +134,7 @@ async function getParcial(mesa, mesa_id) {
   }
 }
 
-
+let parcialValor = 0;
 async function getProducts(id, mesa) {
 
     const res = await fetch(`mesa/${mesa}/products/${id}`);
@@ -154,7 +156,6 @@ async function getProducts(id, mesa) {
 
     divPedidos.innerHTML = '<h2>Pedidos</h2>';
     totalGeral = 0;
-    let parcialValor = 0;
 
     const listaItens = document.createElement('div');
     listaItens.className = 'lista-itens-scroll';
@@ -234,7 +235,7 @@ async function getProducts(id, mesa) {
     else{
         footer.innerHTML = `
             <div class="total" style="margin-top: 20px; font-weight: bold; font-size: 1.2rem;">
-            Total da Mesa: <span> R$ ${totalGeral.toFixed(2)} </span> <br>
+            Total da Mesa: <span> R$ ${total.toFixed(2)} </span> <br>
             </div>
             <br>
             <div class="footer-buttons" style="display: flex; gap: 10px;">
@@ -633,6 +634,7 @@ function openProdModal(botao) {
 
     const extradiv = document.querySelector(".extras");
     extradiv.innerHTML = ""; 
+    extras.sort((a, b) => parseFloat(b.preco) - parseFloat(a.preco));
 
     // Renderiza Extras
     extras.forEach(item => {
@@ -714,6 +716,16 @@ let valorTotalAtual = 0;
 
 function openCheckout(product_id,mesa_id) {
     valorTotalAtual = Number(totalGeral) || 0;
+    console.log("Parcial = " + parcialValor)
+
+    if(parcialValor > 0){
+        const newValue = Number(totalGeral) - Number(parcialValor)
+        console.log(newValue)
+        document.getElementById("valorTotalCheckout").innerText =
+            `R$ ${newValue.toFixed(2).replace(".", ",")}`;
+        document.getElementById("modalFecharConta").style.display = "flex";
+        toggleCheckoutOptions();
+    }
 
     document.getElementById("valorTotalCheckout").innerText =
         `R$ ${valorTotalAtual.toFixed(2).replace(".", ",")}`;

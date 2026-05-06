@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatórios — Burca's</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/relatorios.css">
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon">🍔</div>
+    <span>Burca's</span>
+  </div>
+  <div class="sidebar-label">Menu</div>
+  <nav>
+    <a class="nav-item" href="/"><span class="icon">🪑</span> Mesas</a>
+    <a class="nav-item" href="pedidos.html"><span class="icon">📋</span> Pedidos</a>
+    <a class="nav-item" href="cadastro_produto.html"><span class="icon">🍔</span> Produtos</a>
+    <a class="nav-item" href="admin.html"><span class="icon">⚙️</span> Admin</a>
+    <a class="nav-item active" href="relatorios.html"><span class="icon">📊</span> Relatórios</a>
+  </nav>
+  <div class="sidebar-footer">
+    <button onclick="logout()" class="btn-logout">← Sair</button>
+  </div>
+</aside>
+
+<!-- OVERLAY SIDEBAR MOBILE -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMenu()"></div>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="menu-btn" onclick="toggleMenu()">☰</button>
+      <span class="topbar-title">Relatórios</span>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-badge" id="topbar-loja">—</span>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- FILTROS -->
+    <div class="filtros-bar">
+      <div class="filtros-grupo">
+        <button class="filtro-btn active" onclick="setFiltro(7, this)">7 dias</button>
+        <button class="filtro-btn" onclick="setFiltro(15, this)">15 dias</button>
+        <button class="filtro-btn" onclick="setFiltro(30, this)">30 dias</button>
+        <button class="filtro-btn" onclick="setFiltro(90, this)">90 dias</button>
+      </div>
+      <button class="btn-exportar" onclick="exportarCSV()">⬇ Exportar CSV</button>
+    </div>
+
+    <!-- STATS CARDS -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="stat-icon">💰</div>
+        <div class="stat-value" id="stat-faturamento">R$ —</div>
+        <div class="stat-label">Faturamento total</div>
+        <div class="stat-sub" id="stat-faturamento-sub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📦</div>
+        <div class="stat-value" id="stat-pedidos">—</div>
+        <div class="stat-label">Pedidos realizados</div>
+        <div class="stat-sub" id="stat-pedidos-sub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🍔</div>
+        <div class="stat-value" id="stat-itens">—</div>
+        <div class="stat-label">Itens vendidos</div>
+        <div class="stat-sub" id="stat-itens-sub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🪑</div>
+        <div class="stat-value" id="stat-ticket">R$ —</div>
+        <div class="stat-label">Ticket médio</div>
+        <div class="stat-sub" id="stat-ticket-sub"></div>
+      </div>
+    </div>
+
+    <!-- GRID PRINCIPAL -->
+    <div class="relatorio-grid">
+
+      <!-- RANKING DE PRODUTOS -->
+      <div class="card card-ranking">
+        <div class="card-header">
+          <div>
+            <div class="card-title">🏆 Produtos mais vendidos</div>
+            <div class="card-sub">Ranking por quantidade</div>
+          </div>
+          <select class="filter-select" id="filtro-categoria" onchange="filtrarPorCategoria()">
+            <option value="">Todas</option>
+            <option value="lanches">Lanches</option>
+            <option value="porcoes">Porções</option>
+            <option value="bebidas">Bebidas</option>
+            <option value="sobremesas">Sobremesas</option>
+          </select>
+        </div>
+        <div class="ranking-lista" id="rankingLista">
+          <div class="loading-skeleton"></div>
+          <div class="loading-skeleton"></div>
+          <div class="loading-skeleton"></div>
+          <div class="loading-skeleton"></div>
+          <div class="loading-skeleton"></div>
+        </div>
+      </div>
+
+      <!-- VENDAS POR CATEGORIA -->
+      <div class="card card-categorias">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📂 Vendas por categoria</div>
+            <div class="card-sub">Distribuição de receita</div>
+          </div>
+        </div>
+        <div class="categorias-lista" id="categoriasLista">
+          <div class="loading-skeleton"></div>
+          <div class="loading-skeleton"></div>
+          <div class="loading-skeleton"></div>
+        </div>
+      </div>
+
+      <!-- HISTÓRICO POR DIA -->
+      <div class="card card-historico">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📅 Histórico diário</div>
+            <div class="card-sub">Faturamento por dia</div>
+          </div>
+        </div>
+        <div class="historico-chart" id="historicoChart">
+          <div class="loading-skeleton" style="height:200px"></div>
+        </div>
+      </div>
+
+      <!-- TABELA COMPLETA -->
+      <div class="card card-tabela">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📋 Todos os itens vendidos</div>
+            <div class="card-sub" id="tabela-sub">—</div>
+          </div>
+          <input type="text" class="search-input" placeholder="🔍 Buscar produto..." oninput="filtrarTabela(this.value)">
+        </div>
+        <div class="tabela-wrapper">
+          <table class="tabela-produtos">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Produto</th>
+                <th>Categoria</th>
+                <th>Qtd</th>
+                <th>Receita</th>
+                <th>% do total</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaBody">
+              <tr><td colspan="6" class="empty-row">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="js/relatorios.js"></script>
+</body>
+</html>
