@@ -26,6 +26,57 @@ const bonjour = new Bonjour();
 
 const db = new sqlite3.Database("lanchonete.db")
 
+async function atualizarTotalMesa(mesa_id){
+
+    db.all(
+
+        "SELECT * FROM pedidos WHERE mesa_id=?",
+
+        [mesa_id],
+
+        async (err,result)=>{
+
+            if(err){
+
+                console.log(err)
+
+                return
+            }
+
+            let total = 0
+
+            result.forEach(item=>{
+
+                total +=
+                    Number(item.preco || 0)
+                    *
+                    Number(item.quantidade || 1)
+
+            })
+
+            await db.run(
+
+                `
+                UPDATE mesas
+                SET
+                    total=?,
+                    status=?
+                WHERE id=?
+                `,
+
+                [
+                    total,
+                    total > 0
+                        ? 'ocupada'
+                        : 'livre',
+
+                    mesa_id
+                ]
+            )
+        }
+    )
+}
+
 // cria tabelas
 db.serialize(() => {
   
@@ -50,7 +101,7 @@ db.serialize(() => {
       numero INTEGER UNIQUE,
       status TEXT,
       idLoja TEXT NOT NULL,
-      qty INTEGER,
+      total NUMBER DEFAULT 0,
       parcial NUMBER DEFAULT 0
     )
   `)
@@ -290,7 +341,6 @@ app.get ("/mesa/:id",(req,res)=>{
 
 app.post("/pagaparcial", async (req, res) => {
   const { mesaNumero, valor } = req.body;
-
   if (!mesaNumero || !valor || valor <= 0) {
     return res.status(400).json({ error: 'Dados inválidos' });
   }
@@ -299,14 +349,12 @@ app.post("/pagaparcial", async (req, res) => {
     if (err || !mesa) return res.status(404).json({ error: 'Mesa não encontrada' });
 
     db.get(
-      "SELECT SUM(parcial) as totalParcial FROM pedidos WHERE mesa_id = ? AND status = 'aberto'",
+      "SELECT parcial FROM mesas WHERE id = ? AND status = 'ocupada'",
       [mesa.id],
       (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-
-        const parcialAtual = Number(result?.totalParcial || 0);
-        const novoParcial  = parcialAtual + Number(valor);
-
+        const parcialAtual = Number(result?.parcial || 0);
+        const novoParcial  = parcialAtual + valor;
         db.run(
           "UPDATE mesas SET parcial = ? WHERE id = ?",
           [novoParcial, mesa.id],
@@ -457,6 +505,7 @@ app.post("/add-multi-products", verifyToken ,  (req, res) => {
         });
     });
     dispararImpressao(mesa_numero,itens,req.user.nome)
+    atualizarTotalMesa(mesa_id)
 
     res.json({ success: true, message: "Pedido processado com sucesso!" });
 });
