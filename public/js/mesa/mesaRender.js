@@ -2,6 +2,7 @@ import { state } from '../state/state.js'
 
 import { getParcial } from './mesa.js'
 import { normalizarExtras } from '../cart/cartHelper.js'
+import { isadmin } from '../admin/admin.js'
 
 import {
     maisUm,
@@ -73,9 +74,14 @@ export async function getProducts(id, mesa){
 
         : ''
 
-        const precoExtra = Number(dadosObs.preco || 0)
+        const precoExtra =
+            parseFloat(dadosObs.preco) || 0
 
-        state.totalGeral += precoExtra * item.quantidade
+        const quantidade =
+            parseInt(item.quantidade) || 1
+
+        state.totalGeral +=
+            precoExtra * quantidade
 
         const div = document.createElement('div')
 
@@ -89,26 +95,26 @@ export async function getProducts(id, mesa){
                 <div class="item-detalhes">
                     <span class="item-nome">${dados.nome}</span>
                     <span class="item-nome" style="font-size: 10px">${extrasTexto}</span>
-                    <span class="item-preco">R$ ${precoExtra.toFixed(2)}</span>
+                    <span class="item-preco" id='price-${item.id}'>R$ ${precoExtra.toFixed(2)}</span>
                     
                 </div>
 
                 <div class="item-controles">
 
-                    <button class="menos btn-qtd">
+                    <button class="menos btn-qtd adminpanel">
                         -
                     </button>
 
-                    <span class="qtd-numero">
+                    <span class="qtd-numero" id="qtd-${item.id}">
                         ${item.quantidade}
                     </span>
 
-                    <button class="mais btn-qtd">
+                    <button class="mais btn-qtd adminpanel">
                         +
                     </button>
                 </div>
 
-                <button class="remover btn_remover">
+                <button class="remover btn_remover adminpanel">
                     🗑️
                 </button>
 
@@ -139,10 +145,11 @@ export async function getProducts(id, mesa){
 
     const parcialRes = await parcialReq.json()
 
-    const valorParcial = Number(parcialRes.total || 0)
+    let valorParcial = Number(parcialRes.total || 0)
 
-    const valorRestante = state.totalGeral - valorParcial
+    let valorRestante = state.totalGeral - valorParcial
     state.parcialValor = valorParcial
+    if(state.totalGeral < valorParcial ){valorRestante = 0; valorParcial = state.totalGeral}
 
     footer.className = 'pedido-footer'
 
@@ -151,7 +158,7 @@ export async function getProducts(id, mesa){
         <div class="total">
 
             Total da Mesa:
-            <span>
+            <span id=totalMesa>
                 R$ ${state.totalGeral.toFixed(2)}
             </span>
 
@@ -165,7 +172,7 @@ export async function getProducts(id, mesa){
 
                             Pago:
                             
-                            <span style="color:#ff4d4d">
+                            <span style="color:#ff4d4d" id=parcial>
                                 - R$ ${valorParcial.toFixed(2)}
                             </span>
 
@@ -175,7 +182,7 @@ export async function getProducts(id, mesa){
 
                             Restante:
                             
-                            <span style="color:#00d26a">
+                            <span style="color:#00d26a" id=restante>
                                 R$ ${valorRestante.toFixed(2)}
                             </span>
 
@@ -223,4 +230,5 @@ export async function getProducts(id, mesa){
         .addEventListener('click', ()=>{
             prepararImpressao(id)
         })
+    await isadmin()
 }

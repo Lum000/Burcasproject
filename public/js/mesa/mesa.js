@@ -16,7 +16,7 @@ export async function verifyMesa(){
     document.getElementById("mesaNumero").innerHTML =
         'Mesa ' + mesa
 
-    await mostrarSkeleton(4)
+    await mostrarSkeleton(2)
 
     await getProducts(mesasinfo[0].id, mesa)
 }

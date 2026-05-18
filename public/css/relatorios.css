@@ -628,6 +628,39 @@ body {
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
   animation: shimmer 1.4s infinite;
 }
+.card-logs{
+  grid-column: 1 / -1;
+}
+
+.logs-wrapper{
+  overflow-x:auto;
+}
+
+.log-acao{
+  font-weight:700;
+  color:var(--amarelo);
+}
+
+.log-valor{
+  color:var(--verde);
+  font-weight:700;
+}
+
+.log-data{
+  color:var(--texto-muted);
+  font-size:12px;
+}
+
+.log-badge{
+  display:inline-block;
+  padding:4px 10px;
+  border-radius:20px;
+  background:rgba(255,212,0,0.1);
+  border:1px solid rgba(255,212,0,0.2);
+  color:var(--amarelo);
+  font-size:11px;
+  font-weight:700;
+}
 
 @keyframes shimmer {
   from { transform: translateX(-100%); }

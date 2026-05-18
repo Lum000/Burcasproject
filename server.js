@@ -26,22 +26,32 @@ const bonjour = new Bonjour();
 
 const db = new sqlite3.Database("lanchonete.db")
 
-async function atualizarTotalMesa(mesa_id){
+function atualizarTotalMesa(mesa_id){
+
+    console.log(
+        "rodando atualiza total",
+        mesa_id
+    )
 
     db.all(
 
-        "SELECT * FROM pedidos WHERE mesa_id=?",
+        "SELECT * FROM pedidos WHERE mesa_id = CAST(? AS INTEGER)",
 
         [mesa_id],
 
-        async (err,result)=>{
+        (err,result)=>{
 
             if(err){
 
-                console.log(err)
+                console.log(
+                    "Erro ao buscar pedidos",
+                    err
+                )
 
                 return
             }
+
+            console.log(result)
 
             let total = 0
 
@@ -54,24 +64,37 @@ async function atualizarTotalMesa(mesa_id){
 
             })
 
-            await db.run(
+            console.log(
+                "Total calculado:",
+                total
+            )
+
+            db.run(
 
                 `
                 UPDATE mesas
-                SET
-                    total=?,
-                    status=?
-                WHERE id=?
+                SET total = ?
+                WHERE id = ?
                 `,
 
-                [
-                    total,
-                    total > 0
-                        ? 'ocupada'
-                        : 'livre',
+                [total, mesa_id],
 
-                    mesa_id
-                ]
+                (err)=>{
+
+                    if(err){
+
+                        console.log(
+                            "Erro ao atualizar total",
+                            err
+                        )
+
+                        return
+                    }
+
+                    console.log(
+                        "Total atualizado!"
+                    )
+                }
             )
         }
     )
@@ -148,8 +171,52 @@ db.serialize(() => {
   db.run(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_pedido_unico 
     ON pedidos (mesa_id, produto_id, status, IFNULL(extras, ''))
+  `)
+  db.run(`
+  CREATE TABLE IF NOT EXISTS logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      usuario TEXT,
+      acao TEXT,
+      detalhes TEXT,
+      mesa_id INTEGER,
+      valor REAL,
+      data TEXT
+  )
   `);
 })
+
+
+async function criarLog({
+    usuario = 'Sistema',
+    acao = '',
+    detalhes = '',
+    mesa_id = null,
+    valor = 0
+}){
+
+    const data = new Date().toISOString()
+
+    db.run(`
+        INSERT INTO logs
+        (
+            usuario,
+            acao,
+            detalhes,
+            mesa_id,
+            valor,
+            data
+        )
+        VALUES (?,?,?,?,?,?)
+    `,
+    [
+        usuario,
+        acao,
+        detalhes,
+        mesa_id,
+        valor,
+        data
+    ])
+}
 
 /* Armazenar as logos e imagens */
 const storage = multer.diskStorage({
@@ -469,7 +536,7 @@ try {
 
 /* Imprimir dados */
 
-app.post("/add-multi-products", verifyToken ,  (req, res) => {
+app.post("/add-multi-products", verifyToken , async (req, res) => {
     const idLoja = req.user.idLoja;
     const funcionario = req.user.nome;
     const { mesa_id,mesa_numero,itens} = req.body;
@@ -488,7 +555,7 @@ app.post("/add-multi-products", verifyToken ,  (req, res) => {
               ? [mesa_id, item.id, idLoja, item.extras]
               : [mesa_id, item.id, idLoja];
             
-            db.get(sqlBusca, paramsBusca , (err, row) => {
+            db.get(sqlBusca, paramsBusca , async (err, row) => {
                 if (err) {
                     console.error("Erro na busca:", err);
                     return;
@@ -501,11 +568,18 @@ app.post("/add-multi-products", verifyToken ,  (req, res) => {
                     const sqlInsert = "INSERT INTO pedidos (mesa_id,mesa_numero,func,produto_id,idLoja, quantidade,status,extras,desc, hora,preco) VALUES (?,?,?, ?, ?, ?, ?, ?, ? , ?,?)";
                     db.run(sqlInsert, [mesa_id,mesa_numero,funcionario, item.id,idLoja , item.quantidade,'aberto',item.extras,item.obs, new Date().toISOString(),item.preco]);
                 }
+                await criarLog({
+                  usuario: req.user.nome,
+                  acao: 'ADICIONOU ITEM',
+                  detalhes: `${item.nome} x ${item.quantidade}`,
+                  mesa_id,
+                  valor: item.preco
+                })
+                atualizarTotalMesa(mesa_id)
             });
         });
     });
     dispararImpressao(mesa_numero,itens,req.user.nome)
-    atualizarTotalMesa(mesa_id)
 
     res.json({ success: true, message: "Pedido processado com sucesso!" });
 });
@@ -594,8 +668,14 @@ app.put('/produto/:id', verifyToken, upload.single('imagem'), (req, res) => {
   );
 });
 
-app.delete('/produto/:id', verifyToken, (req, res) => {
+app.delete('/produto/:id', verifyToken, async (req, res) => {
   const idLoja = req.user.idLoja;
+  await criarLog({
+    usuario: req.user.nome,
+    acao: 'REMOVEU ITEM',
+    detalhes: produto.nome,
+    mesaid
+  })
 
   db.run(
     'DELETE FROM produtos WHERE id = ? AND idLoja = ?',
@@ -680,6 +760,14 @@ function normalizarExtras(extras) {
 
 const ThermalPrinter = require("node-thermal-printer").printer;
 const Types = require("node-thermal-printer").types;
+
+// await criarLog({
+//     usuario: req.user.nome,
+//     acao: 'FECHOU COMANDA',
+//     detalhes: `Mesa ${mesa_id}`,
+//     mesa_id,
+//     valor: totalMesa
+// })
 
 app.post("/imprimir-comando", async (req, res) => {
     const { mesa_id, itens, parcial } = req.body;
@@ -1003,15 +1091,46 @@ app.put('/admin/usuarios/:id', verifyToken, checkRole('admin'), async (req, res)
 });
 
 // Deletar usuário
-app.delete('/admin/usuarios/:id', verifyToken, checkRole('admin'), (req, res) => {
+app.delete('/admin/usuarios/:id', verifyToken, checkRole('admin'), async (req, res) => {
   db.run('DELETE FROM usuarios WHERE id=?', [req.params.id],
     (err) => err ? res.status(500).json({ message: err.message }) : res.json({ ok: true })
   );
+  await criarLog({
+    usuario: req.user.nome,
+    acao: 'DELETOU UM USUARIO',
+    detalhes: `${req.params.id}`
+  })
 });
+
+
+app.get('/logs/:dias', async (req,res)=>{
+
+    const dias = Number(req.params.dias || 7)
+
+    db.all(`
+        SELECT *
+        FROM logs
+        WHERE datetime(data)
+        >= datetime('now', ?)
+        ORDER BY id DESC
+    `,
+    [`-${dias} day`],
+    (err,result)=>{
+
+        if(err){
+
+            return res.status(500).json({
+                error: err.message
+            })
+        }
+
+        res.json(result)
+    })
+})
 
 /*  Atualiza a quantidade do produto especifico daquela mesa */
 
-app.get('/addMore/:productid/:mesaid',  async (req,res) =>{
+app.get('/addMore/:productid/:mesaid', verifyToken, async (req,res) =>{
   const product_id = req.params.productid
   const mesa_id = req.params.mesaid
 
@@ -1024,11 +1143,22 @@ app.get('/addMore/:productid/:mesaid',  async (req,res) =>{
         console.error(err.message);
         return;
       }
-      console.log(`Linhas alteradas: ${this.changes}`); 
-      console.log(`Último ID inserido: ${this.lastID}`);
+      db.all("SELECT pedidos.id,pedidos.mesa_id,pedidos.produto_id,pedidos.quantidade,pedidos.preco, produtos.nome as nome,mesas.total as total_mesa FROM pedidos JOIN produtos ON pedidos.produto_id = produtos.id JOIN mesas ON pedidos.mesa_id = mesas.id WHERE pedidos.mesa_id = ? AND pedidos.id = ?",[mesa_id,product_id], async (error,result) =>{
+        if(error){
+          return res.json({error: "Erro ao retornar dados da mesa apos alteração " + err.message})
+        }
+        const oldQty = result[0].quantidade - 1
+        const nome = JSON.stringify(result[0].nome)
+        await criarLog({
+          usuario: req.user.nome,
+          acao: 'ALTEROU QUANTIDADE',
+          detalhes: ` ${oldQty} -> ${nome} -> ${result[0].quantidade}`,
+          mesa_id
+        })
+        return res.json(result)
+      })
     }
     );
-    res.status(200).json({message: "Produto alterado a quantidade com sucesso ! "})
   }
   catch(err){
     res.status(500).json({message: "Erro ao alterar a quantidade !" + err})
@@ -1037,29 +1167,39 @@ app.get('/addMore/:productid/:mesaid',  async (req,res) =>{
 
 
 /*Diminui a quantidade do produto  */
-app.get('/menosUm/:productid/:mesaid',  async (req,res) =>{
+app.get('/menosUm/:productid/:mesaid', verifyToken, async (req,res) =>{
   const product_id = req.params.productid
   const mesa_id = req.params.mesaid
 
   try{
-    db.get("SELECT quantidade FROM pedidos WHERE mesa_id = ? AND id = ?",[mesa_id,product_id] ,(err,row) => {
+    db.get("SELECT quantidade FROM pedidos WHERE mesa_id = ? AND id = ?",[mesa_id,product_id] ,async(err,row) => {
       if(row && row.quantidade > 1){
         const novaquantidade = row.quantidade - 1;
           db.run(
           "UPDATE pedidos SET quantidade = quantidade - 1 WHERE mesa_id = ? AND id = ? AND status = 'aberto' ",
           [mesa_id, product_id],
-          function(err) {
+          (err,resultado) => {
             if (err) {
               console.error(err.message);
               return;
             }
-            console.log(`Linhas alteradas: ${this.changes}`); 
-            console.log(`Último ID inserido: ${this.lastID}`);
-          }
-          )
+          db.get("SELECT pedidos.id,pedidos.mesa_id,pedidos.produto_id,pedidos.quantidade,pedidos.preco, produtos.nome as nome,mesas.total as total_mesa FROM pedidos JOIN produtos ON pedidos.produto_id = produtos.id JOIN mesas ON pedidos.mesa_id = mesas.id WHERE pedidos.mesa_id = ? AND pedidos.id = ?",[mesa_id,product_id], async (error,result) =>{
+            if(error){
+              return res.json({error: "Erro ao retornar dados da mesa apos alteração " + error.message})
+            }
+            const nome = JSON.stringify(result.nome)
+            const oldQty = result.quantidade + 1
+            await criarLog({
+              usuario: req.user.nome,
+              acao: 'ALTEROU QUANTIDADE',
+              detalhes: `${oldQty} -> ${nome} -> ${result.quantidade}`,
+              mesa_id
+            })
+            return res.json(result)
+          })
+        })
       }
     })
-    res.status(200).json({message: "Produto alterado a quantidade com sucesso ! "})
   }
   catch(err){
     res.status(500).json({message: "Erro ao alterar a quantidade !" + err})
@@ -1102,11 +1242,21 @@ app.post("/alterLoja", verifyToken, (req,res) =>{
   }
 })
 
-app.get("/deletarProduto/:productid/:mesaid", verifyToken, (req,res) =>{
+app.get("/deletarProduto/:productid/:mesaid", verifyToken,checkRole('admin'), (req,res) =>{
   const {productid, mesaid} = req.params;
   const idLoja = req.user.idLoja;
+  let nome = ''
+
+  db.get("SELECT nome FROM produtos WHERE id = ? ",[productid], (err,res)=>{
+    if(err){
+      res.json({Error: "Erro ao deletar item" + err.message})
+    }
+    nome = JSON.stringify(res)
+  })
+
   db.run("DELETE FROM pedidos WHERE id = ? AND mesa_id = ? AND status = 'aberto' AND idLoja = ? ", [productid,mesaid,idLoja],
-    function(err){
+    async function(err){
+      
       if(err){
         return res.status(500).json({message: "Erro ao apagar o produto de ID " + productid + " Erro : " + err.message})
       }
@@ -1114,6 +1264,12 @@ app.get("/deletarProduto/:productid/:mesaid", verifyToken, (req,res) =>{
       if(this.changes === 0 ){
         return res.status(400).json({message: "Nenhum Produto Encontrado"})
       }
+      await criarLog({
+        usuario: req.user.nome,
+        acao: 'Deletou Item ',
+        detalhes: ` ${nome}`,
+        mesa_id:mesaid
+      })
       return res.status(200).json({message: "Produto de ID " + productid + " Apagado com Sucesso !!!!"})
     }
   )

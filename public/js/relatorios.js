@@ -14,7 +14,87 @@ const CORES_CATEGORIA = {
 document.addEventListener('DOMContentLoaded', async () => {
   await verificarAuth();
   await carregarRelatorio();
+  await carregarLogs()
 });
+async function carregarLogs(){
+
+    try{
+
+        const req = await fetch(`/logs/${diasFiltro}`)
+
+        const logs = await req.json()
+
+        renderLogs(logs)
+
+    }
+    catch(err){
+
+        console.log(err)
+
+    }
+
+}
+function renderLogs(logs){
+
+    const tbody = document.getElementById('logsBody')
+
+    if(!logs.length){
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="empty-row">
+                    Nenhum log encontrado
+                </td>
+            </tr>
+        `
+
+        return
+    }
+
+    tbody.innerHTML = logs.map(log=>{
+
+        const data = new Date(log.data)
+
+        return `
+            <tr>
+
+                <td>
+                    ${log.usuario || 'Sistema'}
+                </td>
+
+                <td>
+                    <span class="log-badge">
+                        ${log.acao}
+                    </span>
+                </td>
+
+                <td>
+                    ${log.detalhes || '-'}
+                </td>
+
+                <td>
+                    ${log.mesa_id || '-'}
+                </td>
+
+                <td class="log-valor">
+                    ${
+                        Number(log.valor) > 0
+                        ?
+                        `R$ ${Number(log.valor).toFixed(2)}`
+                        :
+                        '-'
+                    }
+                </td>
+
+                <td class="log-data">
+                    ${data.toLocaleString('pt-BR')}
+                </td>
+
+            </tr>
+        `
+
+    }).join('')
+}
 
 async function verificarAuth() {
   try {

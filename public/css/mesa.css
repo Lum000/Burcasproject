@@ -703,14 +703,6 @@ textarea:focus { border-color: var(--amarelo); }
   height: 100%;
 }
 
-.selection-main {
-  flex: 2;
-  display: grid;
-  grid-template-columns: 130px 1fr;
-  background: var(--card-bg);
-  border-right: 1.5px solid var(--card-border);
-}
-
 /* ── CATEGORIAS ── */
 .categories {
   background: #0d0d0d;
@@ -1099,66 +1091,119 @@ textarea:focus { border-color: var(--amarelo); }
   height: 100%;
 }
 
-.products {
-  overflow-y: auto; /* 🔥 aqui acontece o scroll */
-  height: 100%;
-}
 
 /* ── RESPONSIVO ── */
 @media (max-width: 768px) {
+
+  body{
+    overflow: hidden;
+  }
 
   .sidebar{
     background-color: var(--card-bg);
   }
 
-  .nav { display: none; }
-  .menu-btn { display: block; }
+  .nav { 
+    display: none; 
+  }
+
+  .menu-btn { 
+    display: block; 
+  }
 
   .mesa-alterar{
     width: fit-content;
     padding: 5px;
   }
 
-  /* 🔥 MODAL PRINCIPAL */
-  .product-box.selection-box {
-    height: 100vh;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* impede scroll da página */
+  /* OVERLAY */
+  .modal,
+  .alert-overlay{
+    padding: 0;
+    align-items: flex-end;
   }
 
-  /* 🔥 LAYOUT INTERNO */
+  /* MODAL PRINCIPAL */
+  .product-box.selection-box {
+    width: 100%;
+    height: 100dvh;
+    max-width: 100%;
+    border-radius: 18px 18px 0 0;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* LAYOUT INTERNO */
   .modal-layout {
+    display: flex;
     flex-direction: column;
     height: 100%;
     overflow: hidden;
   }
 
-  /* 🔥 LISTA DE PRODUTOS (parte de cima) */
+  /* ÁREA SUPERIOR */
   .selection-main {
     flex: 1;
-    overflow-y: auto;
     min-height: 0;
+
+    display: flex;
+    overflow: hidden;
   }
 
-  /* 🔥 CARRINHO (parte de baixo) */
-  .selection-cart {
-    flex: 0 0 auto;
-    max-height: 40%;
+  /* CATEGORIAS */
+  .categories {
+    width: 95px;
+    min-width: 95px;
     overflow-y: auto;
+  }
+
+  .categories div{
+    font-size: 12px;
+    padding: 12px 8px;
+  }
+
+  /* GRID PRODUTOS */
+  .products {
+    flex: 1;
+
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+
+    gap: 10px;
+    padding: 12px;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    align-content: start;
+  }
+
+  .product-item img{
+    height: 90px;
+  }
+
+  /* CARRINHO */
+  .selection-cart {
+    width: 100%;
+    max-height: 38dvh;
+
+    overflow: hidden;
 
     border-left: none;
-    border-top: 1.5px solid var(--card-border);
+    border-top: 1px solid var(--card-border);
 
-    background: var(--card-bg);
-    z-index: 2;
+    padding: 14px;
+
+    background: #111;
   }
 
-  /* 🔥 LISTA DO CARRINHO */
   .cart-items-preview {
     overflow-y: auto;
-    max-height: 200px;
+    max-height: 180px;
   }
 
   /* BOTÕES */
@@ -1167,27 +1212,26 @@ textarea:focus { border-color: var(--amarelo); }
     justify-content: center;
   }
 
-  .mesa-info { 
-    padding: 0 16px; 
-    margin: 20px auto; 
-  }
-
-  .checkout-box { 
-    margin: 20px 0; 
-  }
-
   .footer-buttons{
     display: flex;
     flex-direction: column;
     gap: 5px;
   }
 
-  .products { 
-    grid-template-columns: repeat(2, 1fr); 
+  .mesa-info { 
+    padding: 0 16px; 
+    margin: 20px auto; 
+  }
+
+  .checkout-box { 
+    margin: 0; 
+    width: 100%;
+    max-width: 100%;
+    border-radius: 18px 18px 0 0;
   }
 
   .product-box { 
-    grid-template-columns: 110px 1fr; 
+    grid-template-columns: 95px 1fr; 
   }
 }
 
