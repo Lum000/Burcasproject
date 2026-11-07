@@ -11,6 +11,7 @@ const bcrypt = require('bcrypt')
 const saltRounds = 10
 
 
+
 const jwt = require('jsonwebtoken');
 const SECRET = process.env.JWT_SECRET
 
@@ -245,6 +246,8 @@ app.use("/uploads",express.static("uploads"))
 // sistema de backup 
 
 const { fazerBackup } = require('./backup');
+const { argon2, hash } = require("crypto");
+const argon2hash = require('argon2');
 
 app.post('/admin/backup', verifyToken, checkRole('admin'), (req, res) => {
   try {
@@ -334,7 +337,7 @@ app.post('/login', async (req, res) => {
       if (err)  return res.status(500).json({ message: 'Erro no banco: ' + err.message });
       if (!row) return res.status(401).json({ message: 'Verifique os campos' });
 
-      const valid = await bcrypt.compare(password, row.password);
+      const valid = await argon2hash.verify(row.password,password);
       if (!valid) return res.status(401).json({ message: 'Verifique os campos' });
 
       const token = jwt.sign(
@@ -358,21 +361,62 @@ app.post('/login', async (req, res) => {
 });
 
 
+app.post('/criar-loja', async (req, res) => {
+  const { nomeLoja, idLoja, senhaLoja } = req.body;
+
+  db.get('SELECT 1 FROM lojasInfo WHERE idLoja = ?', [idLoja], async (err, row) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Erro ao consultar a loja.' });
+    }
+    if (row) {
+      return res.status(409).json({ message: 'Já existe uma loja com esse ID.' });
+    }
+
+    try {
+      const senhaHash = await argon2hash.hash(senhaLoja);
+
+      db.run(
+        'INSERT INTO lojasInfo (idLoja, nomeLoja, password, user) VALUES (?, ?, ?, ?)',
+        [idLoja, nomeLoja, senhaHash, nomeLoja],
+        (err) => {
+          if (err) {
+            console.error(err);
+            return res.status(500).json({ message: 'Erro ao criar nova loja.' });
+          }
+          return res.status(200).json({ message: 'Êxito ao criar nova loja!' });
+        }
+      );
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ message: 'Erro ao processar a senha.' });
+    }
+  });
+});
+
 app.post('/register', async (req,res) =>{
   const {nome,email,senha,idLoja,passLoja} = req.body
   const nomeNorm = nome.trim().toLowerCase();
   const emailNorm = email.trim().toLowerCase();
   const idLojaNorm = idLoja.trim().toLowerCase();
 
-  console.log(nome,email,idLoja,passLoja,senha)
   db.get("SELECT password FROM lojasInfo WHERE idLoja = ?",[idLojaNorm], async (err,result) =>{
+    if(!result){
+      res.status(404).json({
+        code: "loja_nao_encontrada",
+        message: "LOJA NAO ENCONTRADA"
+      })
+    }
     if(err){
       res.status(402).json({message:  "Senha ou IDLoja Não Conferem !! "})
     }
-    const isValid = await bcrypt.compare(passLoja, result.password)
-    if(isValid){
+
+    if(result){
+      const ok = await argon2hash.verify(result.password,passLoja)
+      if(ok){
         try{
-          const hashedpassword = await bcrypt.hash(senha,saltRounds)
+          const hashedpassword = await argon2hash.hash(senha)
+
           const query = "INSERT INTO usuarios (user,password,email,idLoja,passLoja) VALUES (?,?,?,?,?)"
           db.run(query,[nomeNorm,hashedpassword,emailNorm,idLojaNorm,result.password], (err,result) =>{
             if(err){
@@ -384,6 +428,7 @@ app.post('/register', async (req,res) =>{
         catch(err){
           return res.status(400).json({message:"Erro ao registrar usuario " + err.message} )
         }
+      }
     }
   })
 }) 

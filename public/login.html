@@ -47,13 +47,114 @@
             </button>
             
             <div class="footer-links">
-                <span id="errormsg" style="color: red; font-weight: 800"></span><br>
-                <a href="javascript:void(0)" id="toggle-link" onclick="toggleAuth()">
-                    Não tem conta? Cadastre-se
-                </a>
-                <br>
-                <a href="#" class="forgot-pass">Esqueceu a senha?</a><br>
+                <span id="errormsg" class="error-msg"></span>
+                <div class="footer-a">
+                    <a href="javascript:void(0)" id="toggle-link" onclick="toggleAuth()">
+                        Não tem conta? Cadastre-se
+                    </a>
+                    <br>
+                    <a href="#" class="forgot-pass">Esqueceu a senha?</a><br>
+                </div>
             </div>
+            <div class="modal-loja-overlay" id="modalLoja">
+                <div class="modal-loja">
+
+                    <div class="modal-loja-icon">
+                        <span>!</span>
+                    </div>
+
+                    <h2>LOJA NÃO ENCONTRADA</h2>
+
+                    <p id="modalLojaMensagem">
+                        Não encontramos uma loja cadastrada com essas informações.
+                        Que tal criar sua própria loja?
+                    </p>
+
+                    <div class="modal-loja-info">
+                        <span class="status-dot"></span>
+                        Nenhum cadastro localizado
+                    </div>
+
+                    <button class="btn-criar-loja" onclick="criarNovaLoja()">
+                        <span>+</span> CRIAR MINHA LOJA
+                    </button>
+
+                    <button class="btn-voltar-loja" onclick="fecharModalLoja()">
+                        VOLTAR AO LOGIN
+                    </button>
+
+                    <div class="modal-loja-footer">
+                        BURCA'S <span>•</span> SISTEMA
+                    </div>
+
+                </div>
+            </div>
+
+            
+            <div class="modal-loja-overlay" id="modalCadastroLoja">
+                <div class="modal-cadastro-loja">
+
+                    <div class="cadastro-loja-header">
+                        <div class="cadastro-loja-icon">+</div>
+                        <span class="cadastro-tag">NOVO CADASTRO</span>
+                        <h2>CRIAR MINHA LOJA</h2>
+                        <p>Configure sua loja e crie seu acesso de administrador.</p>
+                    </div>
+
+                    <form id="formCadastroLoja">
+
+                        <div class="cadastro-input-group">
+                            <label for="nomeLoja">NOME DA LOJA</label>
+                            <input type="text" id="nomeLoja"
+                                placeholder="Ex: Burca's Lanchonete"
+                                required maxlength="80">
+                        </div>
+
+                        <div class="cadastro-input-group">
+                            <label for="idLoja">IDENTIFICADOR DA LOJA</label>
+                            <input type="text" id="idLojaCadastro"
+                                placeholder="Ex: burcas"
+                                required maxlength="40" disabled>
+                            <small>Será utilizado para identificar sua loja no sistema.</small>
+                        </div>
+                        <div class="cadastro-input-group">
+                            <label for="confirmarSenhaAdmin">Senha da Loja</label>
+                            <input type="password" id="senhaLoja"
+                                placeholder="Crie a senha da sua loja"
+                                required minlength="8" maxlength="128">
+                        </div>
+
+                        <div class="cadastro-divider">
+                            <span>SEGURANÇA DO ADMINISTRADOR</span>
+                        </div>
+
+                        <div class="cadastro-input-group">
+                            <label for="senhaAdmin">SENHA DO ADMINISTRADOR</label>
+                            <input type="password" id="senhaAdmin"
+                                placeholder="Crie uma senha segura"
+                                required minlength="8" maxlength="128">
+                        </div>
+
+                        <div class="cadastro-feedback" id="cadastroFeedback"></div>
+
+                        <button type="submit" class="btn-finalizar-loja" id="btnFinalizarLoja">
+                            CRIAR MINHA LOJA <span>→</span>
+                        </button>
+
+                        <button type="button" class="btn-cancelar-cadastro"
+                            onclick="fecharCadastroLoja()">
+                            CANCELAR
+                        </button>
+
+                    </form>
+
+                    <div class="modal-loja-footer">
+                        BURCA'S <span>•</span> SISTEMA
+                    </div>
+
+                </div>
+            </div>
+
         </div>
     </div>
 </body>
