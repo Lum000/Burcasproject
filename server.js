@@ -304,7 +304,6 @@ function checkRole(...roles) {
 ///get loja info
 app.get('/lojasInfo', verifyToken, (req,res) =>{
   const idLoja = req.user.idLoja
-
   db.all("SELECT * FROM lojasInfo WHERE idLoja = ?",[idLoja], (err,result) =>{
     if(err){
       return res.json({error: "Erro ao retornar ! "})
@@ -417,17 +416,31 @@ app.post('/register', async (req,res) =>{
         try{
           const hashedpassword = await argon2hash.hash(senha)
 
-          const query = "INSERT INTO usuarios (user,password,email,idLoja,passLoja) VALUES (?,?,?,?,?)"
-          db.run(query,[nomeNorm,hashedpassword,emailNorm,idLojaNorm,result.password], (err,result) =>{
+          const verifyUser = db.get("SELECT * FROM usuarios WHERE user = ? AND idLoja = ? ",[nome,idLoja], async (err,row) =>{
             if(err){
-              return res.status(400).json({message:"Erro ao registrar usuario" + err.message})
+              return res.status(400).json({message: "Erro ao verificar usuario ! " + err.message})
             }
-            return res.status(200).json({message: "Exito ao criar usuario na loja " + idLoja})
+            if(!row){
+              const query = "INSERT INTO usuarios (user,password,email,idLoja,passLoja) VALUES (?,?,?,?,?)"
+              db.run(query,[nomeNorm,hashedpassword,emailNorm,idLojaNorm,result.password], (err,result) =>{
+                if(err){
+                  return res.status(400).json({message:"Erro ao registrar usuario" + err.message})
+                }
+                return res.status(200).json({message: "Exito ao criar usuario na loja " + idLoja})
+              })
+            }
+            if(row){
+              return res.status(409).json({message: "Usuario ja existe ! "})
+            }
           })
         }
         catch(err){
           return res.status(400).json({message:"Erro ao registrar usuario " + err.message} )
         }
+      }
+      else{
+        return res.status(409).json({message: "Senha da loja incorreta ! "})
+        
       }
     }
   })

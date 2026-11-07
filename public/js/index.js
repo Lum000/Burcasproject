@@ -30,6 +30,7 @@ async function aplicarPermissoes() {
             window.location.href = 'login.html'
         }
         isAdmin = res.role
+        console.log(res)
         togleAdmin()
         aplicarNomeeLogo()
     }

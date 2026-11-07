@@ -33,7 +33,9 @@ export function renderizarCarrinhoTemporario(){
             item.precoFinal * item.quantidade
 
         total += subtotal
-        const extrasArray = JSON.parse(item.extras || '[]')
+        const extrasArray = Array.isArray(item.extras)
+        ? item.extras
+        : JSON.parse(item.extras || '[]')
 
         const extrasTexto = extrasArray.length > 0
 

@@ -630,8 +630,15 @@ textarea {
 textarea:focus { border-color: var(--amarelo); }
 
 .add-btn {
-  margin-top: 8px;
-  padding: 12px;
+  position: fixed;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  margin: 0 auto;          /* centraliza */
+  width: min(90%, 420px);  /* largura do botão */
+  z-index: 1000;           /* acima do conteúdo do modal */
+
+  padding: 14px;
   border: none;
   background: var(--amarelo);
   color: #000;
@@ -643,6 +650,7 @@ textarea:focus { border-color: var(--amarelo); }
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: var(--transition);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 .add-btn:hover { background: var(--amarelo-escuro); transform: translateY(-1px); }

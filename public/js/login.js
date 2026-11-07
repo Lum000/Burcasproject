@@ -98,7 +98,12 @@ async function Register(nome,email,senha,idLoja,passLoja) {
             abrirModalLoja(req.message)
         }
         if(req.status == 200){
-            isRegister = false;
+            toggleAuth()
+        }
+        if(req.status == 409){
+            const errormsg = document.getElementById("errormsg");
+            errormsg.innerText = res.message;
+            errormsg.style.display = "flex";
         }
     }
     catch(err){
