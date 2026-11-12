@@ -48,6 +48,22 @@ export function calcularDivisao() {
 export async function processarPagamento() {
     const tipo = document.getElementById("tipoPagamento").value;
     let valorPago = state.valorTotalAtual;
+    if (tipo === "total") {
+    try {
+        const req = await fetch("/fecharMesa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mesaNumero: mesa })
+        });
+        const res = await req.json();
+
+        if (!req.ok) throw new Error(res.message);
+        // sucesso: atualize a tela (recarregar mesas, fechar modal, etc.)
+    } catch (err) {
+        console.error("Erro ao fechar comanda:", err.message);
+        // mostre o erro para o usuário (toast, alert...)
+    }
+    }
 
     if (tipo === "parcial") {
         valorPago = parseFloat(document.getElementById("valorParcial").value);
@@ -75,7 +91,8 @@ export async function processarPagamento() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 mesaNumero: mesa,
-                valor: valorPago 
+                valor: valorPago,
+                nomeParcial: parcialNome
             })
         })
         const res =  await req.json()
@@ -86,5 +103,5 @@ export async function processarPagamento() {
 
     showToast("Pagamento processado com sucesso!",'green');
     closeCheckout();
-    location.reload();
+    //location.reload();
 }

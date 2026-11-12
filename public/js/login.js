@@ -195,7 +195,7 @@ async function CadastraLoja(){
 
         const dados = await resposta.json();
 
-        if (!resposta.status(200)) {
+        if (!dados.status(200)) {
             throw new Error(dados.message || 'Não foi possível criar a loja.');
         }
 
