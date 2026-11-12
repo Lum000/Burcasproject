@@ -1,4 +1,5 @@
 import { state } from '../state/state.js'
+import { imagemProduto, imagemPadrao } from '../utils/productIMG.js'
 
 import { getParcial } from './mesa.js'
 import { normalizarExtras } from '../cart/cartHelper.js'
@@ -90,7 +91,12 @@ export async function getProducts(id, mesa){
             <div class="pedido-item">
 
                 <div class="item-img">
-                    <img src='/uploads/${dados.img}' style="width:50px;border-radius:10px;">
+                    <img
+                        src="${imagemProduto(dados)}"
+                        alt="${dados.nome || ''}"
+                        style="width:50px;border-radius:10px;"
+                        onerror="this.onerror=null;this.src='${imagemPadrao(dados.categoria)}'"
+                    >
                 </div>
 
                 <div class="item-detalhes">

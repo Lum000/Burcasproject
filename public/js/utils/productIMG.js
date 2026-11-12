@@ -1,9 +1,9 @@
 const IMAGENS_PADRAO = {
-  lanches:    '/img/padrao/lanche.png',
-  porcoes:    '/img/padrao/porcao.png',
-  bebidas:    '/img/padrao/bebida.png',
-  sobremesas: '/img/padrao/sobremesa.png',
-  default:    '/img/padrao/produto.png'
+  lanches:    '../imgs/padrao/lanche.png' ,
+  porcoes:    '../imgs/padrao/porcao.png',
+  bebidas:    '../imgs/padrao/bebida.png',
+  sobremesas: '../imgs/padrao/sobremesa.png',
+  default:    '../imgs/padrao/produto.png'
 };
 
 // "Porções" -> "porcoes", "Lanches " -> "lanches"
