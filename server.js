@@ -739,6 +739,178 @@ async function dispararImpressao(mesa_numero, itens, func) {
   }
 }
 
+
+
+async function dispararImpressaoCardapio({
+  mesa,
+  cliente,
+  itens,
+  total,
+  idLoja
+}) {
+  try {
+    const printer = criarPrinter();
+
+    const linha = "=".repeat(42);
+    const separador = "-".repeat(42);
+
+    const dinheiro = valor =>
+      Number(valor || 0).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      });
+
+    // FONTE NORMAL EM TODO O CUPOM
+    printer.setTextNormal();
+    printer.alignLeft();
+    printer.bold(false);
+
+    // CABEÇALHO
+    printer.alignCenter();
+    printer.bold(true);
+    printer.println("BURCA'S LANCHONETE");
+    printer.bold(false);
+    printer.println("NOVO PEDIDO");
+    printer.println(linha);
+
+    // DADOS DO PEDIDO
+    printer.alignLeft();
+    printer.bold(true);
+    printer.println(mesa ? `MESA: ${mesa}` : "PEDIDO DELIVERY");
+    printer.bold(false);
+
+    printer.println(`LOJA: ${idLoja}`);
+    printer.println(`DATA: ${new Date().toLocaleString('pt-BR')}`);
+    printer.println(separador);
+
+    // CLIENTE
+    if (cliente) {
+      printer.bold(true);
+      printer.println("DADOS DO CLIENTE");
+      printer.bold(false);
+
+      printer.println(`NOME: ${cliente.nome}`);
+      printer.println(`TELEFONE: ${cliente.telefone}`);
+
+      printer.println(
+        `RECEBIMENTO: ${
+          cliente.tipoEntrega === 'entrega'
+            ? 'ENTREGA'
+            : 'RETIRADA NO BALCAO'
+        }`
+      );
+
+      if (cliente.tipoEntrega === 'entrega' && cliente.endereco) {
+        const e = cliente.endereco;
+
+        printer.println("ENDERECO:");
+        printer.println(`${e.rua}, ${e.numero}`);
+        printer.println(`BAIRRO: ${e.bairro}`);
+
+        if (e.complemento) {
+          printer.println(`COMPLEMENTO: ${e.complemento}`);
+        }
+
+        if (e.referencia) {
+          printer.println(`REFERENCIA: ${e.referencia}`);
+        }
+      }
+
+      printer.println(separador);
+
+      // PAGAMENTOS
+      printer.bold(true);
+      printer.println("FORMAS DE PAGAMENTO");
+      printer.bold(false);
+
+      const nomesPagamento = {
+        pix: 'PIX',
+        dinheiro: 'DINHEIRO',
+        credito: 'CARTAO DE CREDITO',
+        debito: 'CARTAO DE DEBITO'
+      };
+
+      for (const pagamento of cliente.pagamentos || []) {
+        const nome = nomesPagamento[pagamento.metodo] || pagamento.metodo;
+
+        printer.println(`${nome}: ${dinheiro(pagamento.valor)}`);
+
+        if (
+          pagamento.metodo === 'dinheiro' &&
+          cliente.trocoPara &&
+          Number(cliente.trocoPara) > Number(pagamento.valor)
+        ) {
+          printer.println(`TROCO PARA: ${dinheiro(cliente.trocoPara)}`);
+          printer.println(
+            `TROCO: ${dinheiro(
+              Number(cliente.trocoPara) - Number(pagamento.valor)
+            )}`
+          );
+        }
+      }
+
+      printer.println(separador);
+    }
+
+    // ITENS
+    printer.bold(true);
+    printer.println("ITENS DO PEDIDO");
+    printer.bold(false);
+    printer.println(separador);
+
+    for (const item of itens) {
+      printer.bold(true);
+      printer.println(`${item.quantidade}x ${item.nome}`);
+      printer.bold(false);
+
+      printer.println(`Unitario: ${dinheiro(item.valorUnitario)}`);
+      printer.println(`Subtotal: ${dinheiro(item.subtotal)}`);
+
+      if (item.extras?.length) {
+        printer.println("ADICIONAIS:");
+
+        for (const extra of item.extras) {
+          printer.println(` + ${extra.nome}`);
+        }
+      }
+
+      if (item.obs) {
+        printer.bold(true);
+        printer.println("OBS:");
+        printer.bold(false);
+        printer.println(item.obs);
+      }
+
+      printer.println(separador);
+    }
+
+    // TOTAL
+    printer.alignRight();
+    printer.bold(true);
+    printer.println(`TOTAL: ${dinheiro(total)}`);
+    printer.bold(false);
+
+    printer.alignCenter();
+    printer.println(linha);
+    printer.println("OBRIGADO PELA PREFERENCIA!");
+    printer.println("BURCA'S LANCHONETE");
+
+    printer.newLine();
+    printer.cut();
+
+    await printer.execute();
+
+    console.log("Pedido do cardápio impresso com sucesso!");
+    return true;
+
+  } catch (error) {
+    console.error("Erro ao imprimir pedido do cardápio:", error);
+    return false;
+  }
+}
+
+
+
 /* Itens abertos da mesa, com nome e preço base do produto (para a comanda) */
 app.get("/impressao/:mesa_id", verifyToken, async (req, res) => {
   try {
@@ -1428,6 +1600,352 @@ app.get('/api/publico/:idLoja/cardapio', async (req, res) => {
 app.get('/cardapio/:idLoja', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'cardapio', 'index.html'))
 })
+
+
+
+app.post('/adicionarCardapio', async (req, res) => {
+  try {
+    const { idLoja, mesa, cliente, itens } = req.body;
+
+    // VALIDAÇÃO INICIAL
+    if (
+      !idLoja ||
+      typeof idLoja !== 'string' ||
+      !Array.isArray(itens) ||
+      itens.length === 0
+    ) {
+      return res.status(400).json({
+        sucesso: false,
+        erro: 'Pedido inválido'
+      });
+    }
+
+    // VALIDAÇÃO DA MESA
+    if (
+      mesa !== null &&
+      mesa !== undefined &&
+      !/^\d{1,3}$/.test(String(mesa))
+    ) {
+      throw new Error('Mesa inválida');
+    }
+
+    const pedidoSemMesa = !mesa;
+
+    // VALIDAÇÃO DO CLIENTE
+    if (pedidoSemMesa) {
+      if (!cliente || typeof cliente !== 'object') {
+        throw new Error('Informe os dados do cliente');
+      }
+
+      const nome = String(cliente.nome || '').trim();
+      const telefone = String(cliente.telefone || '').replace(/\D/g, '');
+
+      if (nome.length < 3 || !nome.includes(' ')) {
+        throw new Error('Informe o nome completo');
+      }
+
+      if (telefone.length < 10 || telefone.length > 13) {
+        throw new Error('Telefone inválido');
+      }
+
+      if (!['entrega', 'retirada'].includes(cliente.tipoEntrega)) {
+        throw new Error('Método de entrega inválido');
+      }
+
+      if (cliente.tipoEntrega === 'entrega') {
+        const endereco = cliente.endereco;
+
+        if (
+          !endereco ||
+          !String(endereco.rua || '').trim() ||
+          !String(endereco.numero || '').trim() ||
+          !String(endereco.bairro || '').trim()
+        ) {
+          throw new Error(
+            'Informe rua, número e bairro para a entrega'
+          );
+        }
+      }
+    }
+
+    // CALCULAR PRODUTOS E ADICIONAIS
+    let totalPedido = 0;
+    const itensCalculados = [];
+
+    for (const item of itens) {
+      const produto = await dbGet(`
+        SELECT id, nome, preco, extras
+        FROM produtos
+        WHERE id = ?
+          AND idLoja = ?
+          AND COALESCE(ativo, 1) = 1
+          AND COALESCE(disponivel, 1) = 1
+      `, [item.id, idLoja]);
+
+      if (!produto) {
+        throw new Error('Produto não encontrado: ' + item.id);
+      }
+
+      let extrasDisponiveis;
+
+      try {
+        extrasDisponiveis = JSON.parse(produto.extras || '[]');
+      } catch {
+        throw new Error('Erro ao consultar adicionais do produto');
+      }
+
+      if (!Array.isArray(extrasDisponiveis)) {
+        throw new Error('Adicionais do produto inválidos');
+      }
+
+      if (
+        item.extras !== undefined &&
+        !Array.isArray(item.extras)
+      ) {
+        throw new Error('Lista de adicionais inválida');
+      }
+
+      let totalExtras = 0;
+      const extrasSelecionados = [];
+
+      for (const extra of item.extras || []) {
+        const encontrado = extrasDisponiveis.find(
+          e => e.nome === extra.nome
+        );
+
+        if (!encontrado) {
+          throw new Error('Extra inválido: ' + extra.nome);
+        }
+
+        const preco = Number(encontrado.preco);
+
+        if (!Number.isFinite(preco) || preco < 0) {
+          throw new Error('Preço de extra inválido');
+        }
+
+        totalExtras += preco;
+
+        extrasSelecionados.push({
+          nome: encontrado.nome,
+          preco
+        });
+      }
+
+      const quantidade = Number(item.quantidade);
+
+      if (
+        !Number.isInteger(quantidade) ||
+        quantidade < 1 ||
+        quantidade > 50
+      ) {
+        throw new Error('Quantidade inválida');
+      }
+
+      const precoProduto = Number(produto.preco);
+
+      if (!Number.isFinite(precoProduto) || precoProduto < 0) {
+        throw new Error('Preço do produto inválido');
+      }
+
+      const valorUnitario = precoProduto + totalExtras;
+      const subtotal = valorUnitario * quantidade;
+
+      totalPedido += subtotal;
+
+      itensCalculados.push({
+        id: produto.id,
+        nome: produto.nome,
+        quantidade,
+        preco: precoProduto,
+        extras: extrasSelecionados,
+        valorUnitario,
+        subtotal,
+        obs: String(item.obs || '').trim()
+      });
+    }
+
+    // PAGAMENTOS
+    let clienteCalculado = null;
+
+    if (pedidoSemMesa) {
+      const metodosPermitidos = [
+        'pix',
+        'dinheiro',
+        'credito',
+        'debito'
+      ];
+
+      // Compatibilidade com o formato antigo:
+      // cliente.pagamento = "pix"
+      // Se não houver pagamentos, usa o método antigo.
+      let pagamentosRecebidos = cliente.pagamentos;
+
+      if (
+        !Array.isArray(pagamentosRecebidos) ||
+        pagamentosRecebidos.length === 0
+      ) {
+        pagamentosRecebidos = [{
+          metodo: cliente.pagamento,
+          valor: totalPedido
+        }];
+      }
+
+      if (
+        pagamentosRecebidos.length < 1 ||
+        pagamentosRecebidos.length > 2
+      ) {
+        throw new Error('Escolha uma ou duas formas de pagamento');
+      }
+
+      const pagamentosCalculados = [];
+      let somaPagamentosCentavos = 0;
+      const metodosUsados = new Set();
+
+      for (const pagamento of pagamentosRecebidos) {
+        const metodo = String(pagamento.metodo || '').toLowerCase();
+        const valor = Number(pagamento.valor);
+
+        if (!metodosPermitidos.includes(metodo)) {
+          throw new Error('Forma de pagamento inválida');
+        }
+
+        if (metodosUsados.has(metodo)) {
+          throw new Error('Escolha duas formas de pagamento diferentes');
+        }
+
+        if (!Number.isFinite(valor) || valor <= 0) {
+          throw new Error('Informe um valor válido para cada pagamento');
+        }
+
+        const valorCentavos = Math.round(valor * 100);
+
+        metodosUsados.add(metodo);
+        somaPagamentosCentavos += valorCentavos;
+
+        pagamentosCalculados.push({
+          metodo,
+          valor: valorCentavos / 100
+        });
+      }
+
+      const totalCentavos = Math.round(totalPedido * 100);
+
+      if (somaPagamentosCentavos !== totalCentavos) {
+        throw new Error(
+          `A soma dos pagamentos deve ser exatamente ${(
+            totalCentavos / 100
+          ).toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+          })}`
+        );
+      }
+
+      // TROCO: só é aceito quando existe pagamento em dinheiro
+      const pagamentoDinheiro = pagamentosCalculados.find(
+        p => p.metodo === 'dinheiro'
+      );
+
+      let trocoPara = null;
+
+      if (pagamentoDinheiro && cliente.trocoPara) {
+        trocoPara = Number(cliente.trocoPara);
+
+        if (
+          !Number.isFinite(trocoPara) ||
+          trocoPara < pagamentoDinheiro.valor
+        ) {
+          throw new Error(
+            'O valor informado para o troco não pode ser menor que a parte em dinheiro'
+          );
+        }
+
+        trocoPara = Math.round(trocoPara * 100) / 100;
+      } else if (
+        pagamentoDinheiro &&
+        cliente.troco
+      ) {
+        // Compatibilidade com o campo antigo "troco"
+        trocoPara = Number(cliente.troco);
+
+        if (
+          !Number.isFinite(trocoPara) ||
+          trocoPara < pagamentoDinheiro.valor
+        ) {
+          throw new Error('Valor de troco inválido');
+        }
+
+        trocoPara = Math.round(trocoPara * 100) / 100;
+      }
+
+      clienteCalculado = {
+        nome: String(cliente.nome).trim(),
+        telefone: String(cliente.telefone).replace(/\D/g, ''),
+        tipoEntrega: cliente.tipoEntrega,
+
+        endereco: cliente.tipoEntrega === 'entrega'
+          ? {
+              rua: String(cliente.endereco.rua).trim(),
+              numero: String(cliente.endereco.numero).trim(),
+              bairro: String(cliente.endereco.bairro).trim(),
+              complemento: String(
+                cliente.endereco.complemento || ''
+              ).trim(),
+              referencia: String(
+                cliente.endereco.referencia || ''
+              ).trim()
+            }
+          : null,
+
+        // Novo formato de pagamento
+        pagamentos: pagamentosCalculados,
+
+        // Mantém o campo antigo para compatibilidade
+        pagamento: pagamentosCalculados.length === 1
+          ? pagamentosCalculados[0].metodo
+          : null,
+
+        trocoPara
+      };
+    }
+
+    // IMPRIMIR
+    const impresso = await dispararImpressaoCardapio({
+      mesa: mesa || null,
+      cliente: clienteCalculado,
+      itens: itensCalculados,
+      total: totalPedido,
+      idLoja
+    });
+
+    console.log('Pedido calculado:', {
+      idLoja,
+      mesa: mesa || null,
+      cliente: clienteCalculado,
+      total: totalPedido,
+      itens: itensCalculados,
+      impresso
+    });
+
+    return res.status(200).json({
+      sucesso: true,
+      impresso,
+      total: totalPedido,
+      mesa: mesa || null,
+      cliente: clienteCalculado,
+      itens: itensCalculados
+    });
+
+  } catch (erro) {
+    console.error('Erro no pedido:', erro);
+
+    return res.status(400).json({
+      sucesso: false,
+      erro: erro.message
+    });
+  }
+});
+
 
 /* ───────────── PÁGINA INICIAL E SERVIDOR ───────────── */
 

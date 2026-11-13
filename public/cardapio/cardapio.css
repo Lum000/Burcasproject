@@ -593,3 +593,43 @@ main {
   html { scroll-behavior: auto; }
   .skeleton { animation: none; }
 }
+
+
+
+
+#modalCliente .modal-conteudo {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.campo-cliente {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 15px;
+}
+
+.campo-cliente label {
+  font-weight: 600;
+}
+
+.campo-cliente input,
+.campo-cliente select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+  color: #111;
+}
+
+#camposEndereco h3 {
+  margin: 20px 0 12px;
+}
+
+#erroCliente {
+  color: #d62828;
+  font-size: 14px;
+  font-weight: 600;
+}

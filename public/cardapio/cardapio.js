@@ -1,3 +1,4 @@
+
 (function () {
   'use strict';
 
@@ -49,6 +50,7 @@
   let quantidadeSelecionada = 1;
   let observer = null;
   let temporizadorBusca = null;
+  let enviandoPedido = false;
 
   const carrinho = [];
 
@@ -145,11 +147,15 @@
   const mesa = new URLSearchParams(window.location.search)
     .get('mesa');
 
-  if (mesa && /^\d{1,3}$/.test(mesa)) {
+  const mesaValida = mesa && /^\d{1,3}$/.test(mesa)
+    ? mesa
+    : null;
+
+  if (mesaValida) {
     const elementoMesa = $('mesaInfo');
 
     if (elementoMesa) {
-      elementoMesa.textContent = `Mesa ${mesa}`;
+      elementoMesa.textContent = `Mesa ${mesaValida}`;
       elementoMesa.hidden = false;
     }
   }
@@ -310,7 +316,6 @@
     }
 
     desenharCarrinho();
-
     fecharModalProduto();
   });
 
@@ -325,16 +330,23 @@
   });
 
   // CARRINHO
+  function totalCarrinhoPagamento() {
+    return Number(
+      carrinho.reduce(
+        (total, item) =>
+          total + Number(item.preco) * Number(item.quantidade),
+        0
+      ).toFixed(2)
+    );
+  }
+
   function desenharCarrinho() {
     const quantidade = carrinho.reduce(
       (total, item) => total + item.quantidade,
       0
     );
 
-    const total = carrinho.reduce(
-      (soma, item) => soma + item.preco * item.quantidade,
-      0
-    );
+    const total = totalCarrinhoPagamento();
 
     btnCarrinho.hidden = quantidade === 0;
 
@@ -391,6 +403,8 @@
         </div>
       </div>
     `).join('');
+
+    atualizarResumoPagamento();
   }
 
   elMain.addEventListener('click', (evento) => {
@@ -412,7 +426,6 @@
     if (!item) return;
 
     switch (botao.dataset.acao) {
-
       case 'mais':
         item.quantidade++;
         break;
@@ -436,33 +449,475 @@
     desenharCarrinho();
   });
 
-  // FINALIZAÇÃO DO PEDIDO
+  // PAINEL DO CARRINHO
+  function abrirPainelCarrinho() {
+    fundoCarrinho.hidden = false;
+    painelCarrinho.classList.add('aberto');
+    painelCarrinho.setAttribute('aria-hidden', 'false');
+  }
+
+  function fecharPainelCarrinho() {
+    painelCarrinho.classList.remove('aberto');
+    painelCarrinho.setAttribute('aria-hidden', 'true');
+
+    window.setTimeout(() => {
+      if (!painelCarrinho.classList.contains('aberto')) {
+        fundoCarrinho.hidden = true;
+      }
+    }, 300);
+  }
+
+  btnCarrinho.addEventListener('click', abrirPainelCarrinho);
+
+  const fecharCarrinho = $('fecharCarrinho');
+
+  if (fecharCarrinho) {
+    fecharCarrinho.addEventListener('click', fecharPainelCarrinho);
+  }
+
+  fundoCarrinho.addEventListener('click', fecharPainelCarrinho);
+
+  // FORMULÁRIO DO CLIENTE
+  const modalCliente = $('modalCliente');
+  const fecharModalCliente = $('fecharModalCliente');
+  const tipoEntrega = $('tipoEntrega');
+  const camposEndereco = $('camposEndereco');
+  const metodoPagamento = $('metodoPagamento');
+  const campoTroco = $('campoTroco');
+  const erroCliente = $('erroCliente');
+  const confirmarDadosCliente = $('confirmarDadosCliente');
+
   const botaoFinalizar = $('finalizarPedido');
 
-  if (botaoFinalizar) {
-    botaoFinalizar.addEventListener('click', () => {
+  const formularioDisponivel = [
+    modalCliente,
+    fecharModalCliente,
+    tipoEntrega,
+    camposEndereco,
+    metodoPagamento,
+    campoTroco,
+    erroCliente,
+    confirmarDadosCliente
+  ].every(Boolean);
 
-      if (!carrinho.length) return;
+  if (!formularioDisponivel) {
+    console.error(
+      'Formulário do cliente não encontrado. Confira o HTML do modalCliente.'
+    );
+  }
 
-      const pedido = {
-        idLoja,
+  // ==========================================
+  // PAGAMENTO COM UM OU DOIS MÉTODOS
+  // ==========================================
 
-        mesa: mesa && /^\d{1,3}$/.test(mesa)
-          ? mesa
-          : null,
+  let dividirPagamento = null;
+  let valorPrimeiroPagamento = null;
+  let segundoMetodoPagamento = null;
+  let camposPagamentoDuplo = null;
+  let resumoPagamentoDuplo = null;
 
-        itens: carrinho.map((item) => ({
-          id: item.id,
-          quantidade: item.quantidade,
-          obs: item.obs,
+  function instalarPagamentoDuplo() {
+    if (!formularioDisponivel) return;
 
-          extras: item.extras.map((extra) => ({
-            nome: extra.nome
-          }))
-        }))
+    if ($('dividirPagamento')) return;
+
+    const opcoes = [...metodoPagamento.options]
+      .filter((opcao) => opcao.value)
+      .map((opcao) => `
+        <option value="${esc(opcao.value)}">
+          ${esc(opcao.textContent)}
+        </option>
+      `)
+      .join('');
+
+    metodoPagamento.insertAdjacentHTML('afterend', `
+      <div id="areaPagamentoDuplo" style="
+        margin-top:14px;
+        padding:14px;
+        border:1px solid #333;
+        border-radius:10px;
+      ">
+
+        <label style="
+          display:flex;
+          align-items:center;
+          gap:9px;
+          cursor:pointer;
+          font-weight:600;
+        ">
+          <input
+            type="checkbox"
+            id="dividirPagamento"
+            style="width:18px;height:18px;"
+          >
+          Dividir pagamento em 2 métodos
+        </label>
+
+        <div id="camposPagamentoDuplo" hidden style="margin-top:14px;">
+
+          <label for="valorPrimeiroPagamento">
+            Quanto será pago no primeiro método?
+          </label>
+
+          <input
+            type="number"
+            id="valorPrimeiroPagamento"
+            min="0.01"
+            step="0.01"
+            placeholder="Ex: 20,00"
+            style="
+              display:block;
+              width:100%;
+              box-sizing:border-box;
+              padding:12px;
+              margin:7px 0 14px;
+              border-radius:7px;
+            "
+          >
+
+          <label for="segundoMetodoPagamento">
+            Segundo método de pagamento
+          </label>
+
+          <select
+            id="segundoMetodoPagamento"
+            style="
+              display:block;
+              width:100%;
+              box-sizing:border-box;
+              padding:12px;
+              margin:7px 0 14px;
+              border-radius:7px;
+            "
+          >
+            ${opcoes}
+          </select>
+
+          <div style="
+            padding:12px;
+            border-radius:8px;
+            background:rgba(128,128,128,.12);
+            line-height:1.8;
+          ">
+            <div style="display:flex;justify-content:space-between;">
+              <span>Total do pedido:</span>
+              <strong id="totalPagamentoDuplo">R$ 0,00</strong>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;">
+              <span>Primeiro pagamento:</span>
+              <strong id="valorResumoPrimeiro">R$ 0,00</strong>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;">
+              <span>Restante:</span>
+              <strong id="restantePagamentoDuplo">R$ 0,00</strong>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `);
+
+    dividirPagamento = $('dividirPagamento');
+    valorPrimeiroPagamento = $('valorPrimeiroPagamento');
+    segundoMetodoPagamento = $('segundoMetodoPagamento');
+    camposPagamentoDuplo = $('camposPagamentoDuplo');
+    resumoPagamentoDuplo = $('totalPagamentoDuplo');
+
+    dividirPagamento.addEventListener('change', () => {
+      camposPagamentoDuplo.hidden = !dividirPagamento.checked;
+
+      if (dividirPagamento.checked) {
+        const primeiro = metodoPagamento.value;
+
+        const alternativa = [...segundoMetodoPagamento.options]
+          .find(opcao => opcao.value && opcao.value !== primeiro);
+
+        if (alternativa) {
+          segundoMetodoPagamento.value = alternativa.value;
+        }
+      }
+
+      atualizarCampoTroco();
+      atualizarResumoPagamento();
+    });
+
+    valorPrimeiroPagamento.addEventListener('input', () => {
+      atualizarResumoPagamento();
+      atualizarCampoTroco();
+    });
+
+    segundoMetodoPagamento.addEventListener('change', () => {
+      atualizarCampoTroco();
+    });
+
+    metodoPagamento.addEventListener('change', () => {
+      atualizarResumoPagamento();
+      atualizarCampoTroco();
+
+      if (
+        dividirPagamento.checked &&
+        segundoMetodoPagamento.value === metodoPagamento.value
+      ) {
+        const alternativa = [...segundoMetodoPagamento.options]
+          .find(opcao => opcao.value && opcao.value !== metodoPagamento.value);
+
+        if (alternativa) {
+          segundoMetodoPagamento.value = alternativa.value;
+        }
+      }
+    });
+  }
+
+  function obterPagamentos(total) {
+    const primeiroMetodo = metodoPagamento.value;
+
+    if (!primeiroMetodo) {
+      return {
+        erro: 'Selecione a forma de pagamento.'
       };
+    }
 
-      console.log('Pedido pronto para envio:', pedido);
+    // PAGAMENTO ÚNICO
+    if (!dividirPagamento || !dividirPagamento.checked) {
+      return {
+        pagamentos: [
+          {
+            metodo: primeiroMetodo,
+            valor: Number(total.toFixed(2))
+          }
+        ]
+      };
+    }
+
+    // PAGAMENTO DIVIDIDO
+    const valor1 = Number(valorPrimeiroPagamento.value);
+    const segundoMetodo = segundoMetodoPagamento.value;
+
+    if (
+      !Number.isFinite(valor1) ||
+      valor1 <= 0 ||
+      valor1 >= total
+    ) {
+      return {
+        erro: 'Informe um valor válido para o primeiro pagamento. Ele precisa ser menor que o total do pedido.'
+      };
+    }
+
+    if (!segundoMetodo) {
+      return {
+        erro: 'Selecione o segundo método de pagamento.'
+      };
+    }
+
+    if (primeiroMetodo === segundoMetodo) {
+      return {
+        erro: 'Escolha dois métodos de pagamento diferentes.'
+      };
+    }
+
+    const valor2 = Number((total - valor1).toFixed(2));
+
+    return {
+      pagamentos: [
+        {
+          metodo: primeiroMetodo,
+          valor: Number(valor1.toFixed(2))
+        },
+        {
+          metodo: segundoMetodo,
+          valor: valor2
+        }
+      ]
+    };
+  }
+
+  function atualizarResumoPagamento() {
+    if (!dividirPagamento || !resumoPagamentoDuplo) return;
+
+    const total = totalCarrinhoPagamento();
+    const valor1 = Number(valorPrimeiroPagamento.value || 0);
+    const restante = Number((total - valor1).toFixed(2));
+
+    resumoPagamentoDuplo.textContent = brl(total);
+
+    $('valorResumoPrimeiro').textContent = brl(valor1);
+
+    $('restantePagamentoDuplo').textContent =
+      brl(Math.max(0, restante));
+  }
+
+  function temPagamentoEmDinheiro() {
+    if (!dividirPagamento || !dividirPagamento.checked) {
+      return metodoPagamento.value === 'dinheiro';
+    }
+
+    return (
+      metodoPagamento.value === 'dinheiro' ||
+      segundoMetodoPagamento.value === 'dinheiro'
+    );
+  }
+
+  function atualizarCamposEntrega() {
+    if (!formularioDisponivel) return;
+
+    const precisaEndereco = tipoEntrega.value === 'entrega';
+
+    camposEndereco.hidden = !precisaEndereco;
+
+    [
+      'enderecoRua',
+      'enderecoNumero',
+      'enderecoBairro'
+    ].forEach(id => {
+      const campo = $(id);
+
+      if (campo) {
+        campo.required = precisaEndereco;
+      }
+    });
+  }
+
+  function atualizarCampoTroco() {
+    if (!formularioDisponivel) return;
+
+    const precisaTroco = temPagamentoEmDinheiro();
+
+    campoTroco.hidden = !precisaTroco;
+
+    const valorTroco = $('valorTroco');
+
+    if (valorTroco) {
+      valorTroco.required = false;
+    }
+  }
+
+  function mostrarErroCliente(mensagem) {
+    erroCliente.textContent = mensagem;
+    erroCliente.hidden = false;
+  }
+
+  function mostrarFormularioCliente() {
+    if (!formularioDisponivel) {
+      alert('O formulário de identificação não foi encontrado.');
+      return;
+    }
+
+    modalCliente.hidden = false;
+    erroCliente.hidden = true;
+
+    atualizarResumoPagamento();
+    atualizarCampoTroco();
+  }
+
+  function fecharFormularioCliente() {
+    if (!formularioDisponivel) return;
+
+    modalCliente.hidden = true;
+    erroCliente.hidden = true;
+  }
+
+  if (formularioDisponivel) {
+    instalarPagamentoDuplo();
+
+    tipoEntrega.addEventListener('change', atualizarCamposEntrega);
+
+    fecharModalCliente.addEventListener('click', fecharFormularioCliente);
+
+    modalCliente.addEventListener('click', (evento) => {
+      if (evento.target === modalCliente) {
+        fecharFormularioCliente();
+      }
+    });
+
+    atualizarCamposEntrega();
+    atualizarCampoTroco();
+  }
+
+  // ENVIA O PEDIDO PARA O NODE.JS
+  async function enviarPedido(cliente = null) {
+    if (!carrinho.length || enviandoPedido) return;
+
+    // CALCULA OS PAGAMENTOS
+    if (cliente) {
+      const total = totalCarrinhoPagamento();
+      const resultadoPagamentos = obterPagamentos(total);
+
+      if (resultadoPagamentos.erro) {
+        mostrarErroCliente(resultadoPagamentos.erro);
+        return;
+      }
+
+      cliente.pagamentos = resultadoPagamentos.pagamentos;
+
+      // Mantém compatibilidade com o pagamento principal
+      cliente.pagamento = resultadoPagamentos.pagamentos[0].metodo;
+
+      // Valor de troco somente se houver pagamento em dinheiro
+      cliente.troco = temPagamentoEmDinheiro()
+        ? $('valorTroco')?.value.trim() || null
+        : null;
+    }
+
+    const pedido = {
+      idLoja,
+
+      mesa: mesaValida,
+
+      cliente,
+
+      itens: carrinho.map(item => ({
+        id: item.id,
+        quantidade: item.quantidade,
+        obs: item.obs,
+
+        extras: item.extras.map(extra => ({
+          nome: extra.nome
+        }))
+      }))
+    };
+
+    enviandoPedido = true;
+
+    if (botaoFinalizar) {
+      botaoFinalizar.disabled = true;
+    }
+
+    if (confirmarDadosCliente) {
+      confirmarDadosCliente.disabled = true;
+    }
+
+    try {
+      const res = await fetch('/adicionarCardapio', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(pedido)
+      });
+
+      let resultado;
+
+      try {
+        resultado = await res.json();
+      } catch {
+        throw new Error('O servidor retornou uma resposta inválida.');
+      }
+
+      if (!res.ok || !resultado.sucesso) {
+        throw new Error(resultado.erro || 'Erro ao enviar pedido.');
+      }
+
+      console.log('Pedido enviado:', resultado);
+
+      fecharFormularioCliente();
+      fecharPainelCarrinho();
+
+      carrinho.length = 0;
+      desenharCarrinho();
+
+      alert('Pedido enviado com sucesso!');
 
       window.dispatchEvent(
         new CustomEvent('pedido:finalizar', {
@@ -470,57 +925,147 @@
         })
       );
 
+    } catch (error) {
+      console.error('Erro ao finalizar pedido:', error);
+
+      alert(
+        error.message || 'Não foi possível enviar seu pedido.'
+      );
+
+    } finally {
+      enviandoPedido = false;
+
+      if (botaoFinalizar) {
+        botaoFinalizar.disabled = false;
+      }
+
+      if (confirmarDadosCliente) {
+        confirmarDadosCliente.disabled = false;
+      }
+    }
+  }
+
+  // CLIQUE EM FINALIZAR
+  if (botaoFinalizar) {
+    botaoFinalizar.addEventListener('click', () => {
+      if (!carrinho.length || enviandoPedido) return;
+
+      // COM MESA: ENVIA DIRETAMENTE
+      if (mesaValida) {
+        enviarPedido();
+        return;
+      }
+
+      // SEM MESA: SOLICITA OS DADOS DO CLIENTE
+      mostrarFormularioCliente();
     });
   }
 
-  // PAINEL DO CARRINHO
-  function abrirPainelCarrinho() {
-    fundoCarrinho.hidden = false;
+  // CONFIRMAÇÃO DOS DADOS DO CLIENTE
+  if (formularioDisponivel) {
+    confirmarDadosCliente.addEventListener('click', () => {
+      const nome = $('clienteNome')?.value.trim() || '';
+      const telefone = $('clienteTelefone')?.value.trim() || '';
+      const tipo = tipoEntrega.value;
+      const pagamento = metodoPagamento.value;
 
-    painelCarrinho.classList.add('aberto');
+      erroCliente.hidden = true;
 
-    painelCarrinho.setAttribute('aria-hidden', 'false');
-  }
-
-  function fecharPainelCarrinho() {
-    painelCarrinho.classList.remove('aberto');
-
-    painelCarrinho.setAttribute('aria-hidden', 'true');
-
-    window.setTimeout(() => {
-
-      if (!painelCarrinho.classList.contains('aberto')) {
-        fundoCarrinho.hidden = true;
+      if (nome.length < 3) {
+        mostrarErroCliente('Informe seu nome completo.');
+        return;
       }
 
-    }, 300);
+      if (!nome.includes(' ')) {
+        mostrarErroCliente('Informe seu nome e sobrenome.');
+        return;
+      }
+
+      const numerosTelefone = telefone.replace(/\D/g, '');
+
+      if (numerosTelefone.length < 10 || numerosTelefone.length > 13) {
+        mostrarErroCliente('Informe um telefone válido com DDD.');
+        return;
+      }
+
+      if (!pagamento) {
+        mostrarErroCliente('Selecione a forma de pagamento.');
+        return;
+      }
+
+      const total = totalCarrinhoPagamento();
+      const resultadoPagamentos = obterPagamentos(total);
+
+      if (resultadoPagamentos.erro) {
+        mostrarErroCliente(resultadoPagamentos.erro);
+        return;
+      }
+
+      let endereco = null;
+
+      if (tipo === 'entrega') {
+        const rua = $('enderecoRua')?.value.trim() || '';
+        const numero = $('enderecoNumero')?.value.trim() || '';
+        const bairro = $('enderecoBairro')?.value.trim() || '';
+
+        if (!rua || !numero || !bairro) {
+          mostrarErroCliente(
+            'Preencha a rua, o número e o bairro.'
+          );
+          return;
+        }
+
+        endereco = {
+          rua,
+          numero,
+          bairro,
+          complemento: $('enderecoComplemento')?.value.trim() || '',
+          referencia: $('enderecoReferencia')?.value.trim() || ''
+        };
+      }
+
+      const valorTroco = $('valorTroco')?.value.trim() || '';
+
+      if (temPagamentoEmDinheiro() && valorTroco) {
+        const valor = Number(valorTroco);
+
+        if (!Number.isFinite(valor) || valor <= 0) {
+          mostrarErroCliente('Informe um valor de troco válido.');
+          return;
+        }
+
+        if (valor <= total) {
+          mostrarErroCliente(
+            'O valor para troco precisa ser maior que o total do pedido.'
+          );
+          return;
+        }
+      }
+
+      const cliente = {
+        nome,
+        telefone: numerosTelefone,
+        tipoEntrega,
+        endereco,
+        pagamento,
+        pagamentos: resultadoPagamentos.pagamentos,
+        troco: temPagamentoEmDinheiro()
+          ? valorTroco || null
+          : null
+      };
+
+      // Corrige o campo tipoEntrega com o valor selecionado
+      cliente.tipoEntrega = tipo;
+
+      enviarPedido(cliente);
+    });
   }
-
-  btnCarrinho.addEventListener(
-    'click',
-    abrirPainelCarrinho
-  );
-
-  const fecharCarrinho = $('fecharCarrinho');
-
-  if (fecharCarrinho) {
-    fecharCarrinho.addEventListener(
-      'click',
-      fecharPainelCarrinho
-    );
-  }
-
-  fundoCarrinho.addEventListener(
-    'click',
-    fecharPainelCarrinho
-  );
 
   // AGRUPAMENTO DE CATEGORIAS
   function agrupar(lista) {
     const grupos = new Map();
 
     lista.forEach((produto) => {
-
       const chave = norm(produto.categoria) || 'outros';
 
       if (!grupos.has(chave)) {
@@ -531,23 +1076,19 @@
       }
 
       grupos.get(chave).itens.push(produto);
-
     });
 
     return [...grupos.entries()].sort((a, b) => {
-
       const indiceA = ORDEM.indexOf(a[0]);
       const indiceB = ORDEM.indexOf(b[0]);
 
       return (indiceA === -1 ? 99 : indiceA) -
         (indiceB === -1 ? 99 : indiceB);
-
     });
   }
 
   // CARD DO PRODUTO
   function cardHTML(produto) {
-
     const indisponivel =
       Number(produto.disponivel) === 0;
 
@@ -615,37 +1156,28 @@
 
   // ABAS DAS CATEGORIAS
   function ativarTabs() {
-
     const tabs = [
       ...elTabs.querySelectorAll('.tab')
     ];
 
     tabs.forEach((tab) => {
-
       tab.addEventListener('click', () => {
-
         document.getElementById(tab.dataset.alvo)
           ?.scrollIntoView({
             behavior: 'smooth',
             block: 'start'
           });
-
       });
-
     });
 
     if (observer) observer.disconnect();
 
     if ('IntersectionObserver' in window) {
-
       observer = new IntersectionObserver((entradas) => {
-
         entradas.forEach((entrada) => {
-
           if (!entrada.isIntersecting) return;
 
           tabs.forEach((tab) => {
-
             const ativa =
               tab.dataset.alvo === entrada.target.id;
 
@@ -657,18 +1189,14 @@
                 block: 'nearest'
               });
             }
-
           });
-
         });
-
       }, {
         rootMargin: '-35% 0px -60% 0px'
       });
 
       elMain.querySelectorAll('.categoria')
         .forEach((secao) => observer.observe(secao));
-
     }
 
     tabs[0]?.classList.add('ativa');
@@ -676,7 +1204,6 @@
 
   // DESENHAR CARDÁPIO
   function desenhar() {
-
     const termo = norm(elBusca.value);
 
     const filtrados = termo
@@ -688,7 +1215,6 @@
       : produtos;
 
     if (!filtrados.length) {
-
       elTabs.innerHTML = '';
 
       mostrarVazio(
@@ -734,14 +1260,12 @@
 
   // CARREGAR CARDÁPIO
   async function carregar() {
-
     if (!idLoja) {
       mostrarVazio('Endereço do cardápio inválido.');
       return;
     }
 
     try {
-
       const resposta = await fetch(
         `/api/publico/${encodeURIComponent(idLoja)}/cardapio`
       );
@@ -772,11 +1296,9 @@
         `${dados.loja?.nomeLoja || 'Cardápio'} · Cardápio`;
 
       if (dados.loja?.logo) {
-
         const logo = $('logo');
 
         if (logo) {
-
           const caminhoLogo = String(dados.loja.logo);
 
           logo.src = /^(\/|https?:\/\/)/i.test(caminhoLogo)
@@ -795,26 +1317,22 @@
       desenharCarrinho();
 
     } catch (erro) {
-
       console.error('Erro ao carregar o cardápio:', erro);
 
       mostrarVazio(
         'Não foi possível carregar o cardápio. Verifique a conexão com a internet.'
       );
-
     }
   }
 
   // BUSCA
   elBusca.addEventListener('input', () => {
-
     window.clearTimeout(temporizadorBusca);
 
     temporizadorBusca = window.setTimeout(
       desenhar,
       180
     );
-
   });
 
   // INICIAR

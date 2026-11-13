@@ -265,5 +265,95 @@
     Chame o garçom para fazer seu pedido 🙂
   </footer>
 
+
+  <!-- MODAL DE DADOS DO CLIENTE -->
+<div id="modalCliente" class="modal-produto" hidden>
+  <div class="modal-conteudo">
+
+    <header class="modal-header">
+      <h2>Finalize seu pedido</h2>
+      <button type="button" id="fecharModalCliente">✕</button>
+    </header>
+
+    <div class="modal-corpo">
+
+      <div class="campo-cliente">
+        <label for="clienteNome">Nome completo</label>
+        <input id="clienteNome" type="text" placeholder="Seu nome completo" maxlength="120" autocomplete="name">
+      </div>
+
+      <div class="campo-cliente">
+        <label for="clienteTelefone">Telefone / WhatsApp</label>
+        <input id="clienteTelefone" type="tel" placeholder="(00) 00000-0000" maxlength="20" autocomplete="tel">
+      </div>
+
+      <div class="campo-cliente">
+        <label for="tipoEntrega">Como deseja receber?</label>
+        <select id="tipoEntrega">
+          <option value="entrega">Entrega em domicílio</option>
+          <option value="retirada">Retirada no balcão</option>
+        </select>
+      </div>
+
+      <div id="camposEndereco">
+
+        <h3>Endereço de entrega</h3>
+
+        <div class="campo-cliente">
+          <label for="enderecoRua">Rua / Avenida</label>
+          <input id="enderecoRua" type="text" maxlength="150" autocomplete="street-address">
+        </div>
+
+        <div class="campo-cliente">
+          <label for="enderecoNumero">Número</label>
+          <input id="enderecoNumero" type="text" maxlength="20">
+        </div>
+
+        <div class="campo-cliente">
+          <label for="enderecoBairro">Bairro</label>
+          <input id="enderecoBairro" type="text" maxlength="100">
+        </div>
+
+        <div class="campo-cliente">
+          <label for="enderecoComplemento">Complemento</label>
+          <input id="enderecoComplemento" type="text" maxlength="100" placeholder="Apartamento, casa, bloco...">
+        </div>
+
+        <div class="campo-cliente">
+          <label for="enderecoReferencia">Ponto de referência</label>
+          <input id="enderecoReferencia" type="text" maxlength="150" placeholder="Próximo a...">
+        </div>
+
+      </div>
+
+      <div class="campo-cliente">
+        <label for="metodoPagamento">Forma de pagamento</label>
+        <select id="metodoPagamento">
+          <option value="">Selecione</option>
+          <option value="pix">Pix</option>
+          <option value="dinheiro">Dinheiro</option>
+          <option value="credito">Cartão de crédito</option>
+          <option value="debito">Cartão de débito</option>
+        </select>
+      </div>
+
+      <div id="campoTroco" class="campo-cliente" hidden>
+        <label for="valorTroco">Precisa de troco para quanto?</label>
+        <input id="valorTroco" type="number" min="0" maxlength="4" step="0.01" placeholder="Ex.: 100">
+      </div>
+
+      <p id="erroCliente" role="alert" hidden></p>
+
+    </div>
+
+    <footer class="modal-footer">
+      <button type="button" id="confirmarDadosCliente">
+        Confirmar pedido →
+      </button>
+    </footer>
+
+  </div>
+</div>
+
 </body>
 </html>
