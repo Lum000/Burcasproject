@@ -19,11 +19,11 @@ function esc(t) {
 }
 
 const IMAGENS_PADRAO = {
-  lanches:    '/img/padrao/lanche.svg',
-  porcoes:    '/img/padrao/porcao.svg',
-  bebidas:    '/img/padrao/bebida.svg',
-  sobremesas: '/img/padrao/sobremesa.svg',
-  default:    '/img/padrao/produto.svg'
+  lanches:    '/imgs/padrao/lanches.png',
+  porcoes:    '/imgs/padrao/porcao.png',
+  bebidas:    '/imgs/padrao/bebida.png',
+  sobremesas: '/imgs/padrao/sobremesa.png',
+  default:    '/imgs/padrao/produto.png'
 };
 
 function imagemPadrao(categoria) {

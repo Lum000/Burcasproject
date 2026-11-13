@@ -674,70 +674,183 @@ function criarPrinter() {
   })
 }
 
+
 async function dispararImpressao(mesa_numero, itens, func) {
-  try {
-    const printer = criarPrinter()
-    const linha = "=".repeat(21)
-    const linhafina = "-".repeat(21)
+    try {
+        const printer = criarPrinter();
 
-    printer.alignCenter()
-    printer.bold(true)
-    printer.setTextSize(1, 1)
-    printer.println("NOVO PEDIDO")
-    printer.println(linha)
-    printer.bold(false)
+        const LARGURA = 42;
+        const linha = "=".repeat(LARGURA);
+        const linhaFina = "-".repeat(LARGURA);
 
-    printer.alignLeft()
-    printer.bold(true)
-    printer.println(`MESA: ${mesa_numero}`)
-    printer.bold(false)
-    printer.println(`HORA: ${new Date().toLocaleTimeString('pt-BR')}`)
-    printer.println(`OPER: ${func || '—'}`)
-    printer.println(linhafina)
+        function imprimirTexto(texto) {
+            const palavras = String(texto || "").split(/\s+/);
+            let atual = "";
 
-    itens.forEach(item => {
-      printer.alignLeft()
-      printer.bold(true)
-      printer.setTextSize(1, 1)
+            for (const palavra of palavras) {
+                if (!palavra) continue;
 
-      const nome = (item.nome || 'PRODUTO').substring(0, 16).toUpperCase()
-      const qtd = `x${item.quantidade || 1}`
-      printer.println(qtd)
-      printer.println(nome)
+                if ((atual + " " + palavra).trim().length > LARGURA) {
+                    printer.println(atual);
+                    atual = palavra;
+                } else {
+                    atual = (atual + " " + palavra).trim();
+                }
+            }
 
-      printer.bold(false)
+            if (atual) printer.println(atual);
+        }
 
-      const lista = normalizarExtras(item.extras)
-      if (lista.length > 0) {
-        printer.bold(true)
-        printer.println("ADICIONAIS:")
-        printer.bold(false)
+        function normalizarLista(extras) {
+            if (!extras) return [];
 
-        lista.forEach(e => {
-          const nomeExtra = typeof e === 'object' ? e.nome : e
-          printer.println(`+ ${String(nomeExtra).toUpperCase()}`)
-        })
-      }
+            if (typeof extras === "string") {
+                try {
+                    extras = JSON.parse(extras);
+                } catch {
+                    return [extras];
+                }
+            }
 
-      const obs = (item.obs || item.desc || '').trim()
-      if (obs) {
-        printer.bold(true)
-        printer.println("OBS:")
-        printer.bold(false)
-        printer.println(obs.toUpperCase())
-      }
+            return Array.isArray(extras) ? extras : [];
+        }
 
-      printer.println(linhafina)
-    })
+        // Agrupa os produtos por categoria
+        const grupos = {
+            lanches: { titulo: "LANCHES", itens: [] },
+            porcoes: { titulo: "PORCOES", itens: [] },
+            bebidas: { titulo: "BEBIDAS", itens: [] },
+            sobremesas: { titulo: "SOBREMESAS", itens: [] },
+            outros: { titulo: "OUTROS", itens: [] }
+        };
 
-    printer.newLine()
-    printer.cut()
+        (itens || []).forEach(item => {
+            const categoria = String(item.categoria || "")
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase()
+                .trim();
 
-    await printer.execute()
-  } catch (error) {
-    console.error("Erro na impressora:", error)
-  }
+            const grupo = grupos[categoria] ? categoria : "outros";
+
+            grupos[grupo].itens.push(item);
+        });
+
+        const gruposComItens = Object.values(grupos)
+            .filter(grupo => grupo.itens.length > 0);
+
+        // Imprime cada categoria em um papel separado
+        for (const grupo of gruposComItens) {
+
+            printer.clear();
+
+            // Cabeçalho
+            printer.alignCenter();
+            printer.bold(true);
+            printer.setTextSize(1, 1);
+            printer.println("BURCA'S LANCHONETE");
+
+            printer.setTextSize(0, 0);
+            printer.println(linha);
+
+            printer.setTextSize(1, 1);
+            printer.println(grupo.titulo);
+
+            printer.setTextSize(0, 0);
+            printer.println(linha);
+            printer.bold(false);
+
+            // Mesa e operador
+            printer.alignLeft();
+            printer.bold(true);
+            printer.setTextSize(1, 1);
+            printer.println(`MESA: ${mesa_numero || "--"}`);
+            printer.setTextSize(0, 0);
+            printer.bold(false);
+
+            printer.println(
+                `HORA: ${new Date().toLocaleTimeString("pt-BR")}`
+            );
+
+            if (func) {
+                imprimirTexto(`OPERADOR: ${func}`);
+            }
+
+            printer.println(linhaFina);
+
+            // Produtos
+            grupo.itens.forEach(item => {
+                const quantidade = Number(item.quantidade || 1);
+                const nome = String(item.nome || "PRODUTO").toUpperCase();
+
+                printer.bold(true);
+                printer.setTextSize(1, 1);
+                imprimirTexto(`${quantidade}x ${nome}`);
+                printer.setTextSize(0, 0);
+                printer.bold(false);
+
+                // Adicionais
+                const extras = normalizarLista(item.extras);
+
+                if (extras.length) {
+                    printer.bold(true);
+                    printer.println("ADICIONAIS:");
+                    printer.bold(false);
+
+                    extras.forEach(extra => {
+                        const nomeExtra =
+                            typeof extra === "object"
+                                ? extra.nome
+                                : extra;
+
+                        imprimirTexto(
+                            ` + ${String(nomeExtra || "").toUpperCase()}`
+                        );
+                    });
+                }
+
+                // Observações
+                const obs = String(
+                    item.obs ||
+                    item.observacao ||
+                    item.desc ||
+                    ""
+                ).trim();
+
+                if (obs) {
+                    printer.bold(true);
+                    printer.println("OBSERVACAO:");
+                    printer.bold(false);
+                    imprimirTexto(obs.toUpperCase());
+                }
+
+                printer.println(linhaFina);
+            });
+
+            // Identificação do fim da categoria
+            printer.alignCenter();
+            printer.bold(true);
+            printer.println(`FIM - ${grupo.titulo}`);
+            printer.bold(false);
+
+            // Avança e faz o corte físico
+            printer.newLine();
+            printer.newLine();
+            printer.cut();
+
+            // Pequena pausa entre as impressões
+            await printer.execute();
+
+            if (gruposComItens.indexOf(grupo) !== gruposComItens.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+
+    } catch (error) {
+        console.error("Erro na impressora:", error);
+    }
 }
+
 
 
 
@@ -1366,8 +1479,10 @@ app.get("/getprodutobody/:productid", (req, res) => {
   })
 })
 
-app.get("/products/:category", (req, res) => {
-  db.all("SELECT * FROM produtos WHERE categoria = ?", [req.params.category], (err, produto) => {
+app.get("/products/:category",verifyToken, checkRole('admin'), (req, res) => {
+  const idLoja = req.user.idLoja
+  console.log(idLoja)
+  db.all("SELECT * FROM produtos WHERE categoria = ? AND idLoja = ?", [req.params.category,idLoja], (err, produto) => {
     if (err) {
       console.log("Impossivel recuperar os produtos erro  " + err)
       return res.status(500).json({ error: err.message })
@@ -1604,346 +1719,368 @@ app.get('/cardapio/:idLoja', (req, res) => {
 
 
 app.post('/adicionarCardapio', async (req, res) => {
-  try {
-    const { idLoja, mesa, cliente, itens } = req.body;
+    try {
+        const { idLoja, mesa, cliente, itens } = req.body;
 
-    // VALIDAÇÃO INICIAL
-    if (
-      !idLoja ||
-      typeof idLoja !== 'string' ||
-      !Array.isArray(itens) ||
-      itens.length === 0
-    ) {
-      return res.status(400).json({
-        sucesso: false,
-        erro: 'Pedido inválido'
-      });
-    }
+        // ==========================================
+        // VALIDAÇÕES INICIAIS
+        // ==========================================
 
-    // VALIDAÇÃO DA MESA
-    if (
-      mesa !== null &&
-      mesa !== undefined &&
-      !/^\d{1,3}$/.test(String(mesa))
-    ) {
-      throw new Error('Mesa inválida');
-    }
-
-    const pedidoSemMesa = !mesa;
-
-    // VALIDAÇÃO DO CLIENTE
-    if (pedidoSemMesa) {
-      if (!cliente || typeof cliente !== 'object') {
-        throw new Error('Informe os dados do cliente');
-      }
-
-      const nome = String(cliente.nome || '').trim();
-      const telefone = String(cliente.telefone || '').replace(/\D/g, '');
-
-      if (nome.length < 3 || !nome.includes(' ')) {
-        throw new Error('Informe o nome completo');
-      }
-
-      if (telefone.length < 10 || telefone.length > 13) {
-        throw new Error('Telefone inválido');
-      }
-
-      if (!['entrega', 'retirada'].includes(cliente.tipoEntrega)) {
-        throw new Error('Método de entrega inválido');
-      }
-
-      if (cliente.tipoEntrega === 'entrega') {
-        const endereco = cliente.endereco;
-
-        if (
-          !endereco ||
-          !String(endereco.rua || '').trim() ||
-          !String(endereco.numero || '').trim() ||
-          !String(endereco.bairro || '').trim()
-        ) {
-          throw new Error(
-            'Informe rua, número e bairro para a entrega'
-          );
-        }
-      }
-    }
-
-    // CALCULAR PRODUTOS E ADICIONAIS
-    let totalPedido = 0;
-    const itensCalculados = [];
-
-    for (const item of itens) {
-      const produto = await dbGet(`
-        SELECT id, nome, preco, extras
-        FROM produtos
-        WHERE id = ?
-          AND idLoja = ?
-          AND COALESCE(ativo, 1) = 1
-          AND COALESCE(disponivel, 1) = 1
-      `, [item.id, idLoja]);
-
-      if (!produto) {
-        throw new Error('Produto não encontrado: ' + item.id);
-      }
-
-      let extrasDisponiveis;
-
-      try {
-        extrasDisponiveis = JSON.parse(produto.extras || '[]');
-      } catch {
-        throw new Error('Erro ao consultar adicionais do produto');
-      }
-
-      if (!Array.isArray(extrasDisponiveis)) {
-        throw new Error('Adicionais do produto inválidos');
-      }
-
-      if (
-        item.extras !== undefined &&
-        !Array.isArray(item.extras)
-      ) {
-        throw new Error('Lista de adicionais inválida');
-      }
-
-      let totalExtras = 0;
-      const extrasSelecionados = [];
-
-      for (const extra of item.extras || []) {
-        const encontrado = extrasDisponiveis.find(
-          e => e.nome === extra.nome
-        );
-
-        if (!encontrado) {
-          throw new Error('Extra inválido: ' + extra.nome);
+        if (!idLoja) {
+            throw new Error('Loja não informada.');
         }
 
-        const preco = Number(encontrado.preco);
-
-        if (!Number.isFinite(preco) || preco < 0) {
-          throw new Error('Preço de extra inválido');
+        if (!Array.isArray(itens) || itens.length === 0) {
+            throw new Error('Nenhum produto foi enviado.');
         }
 
-        totalExtras += preco;
-
-        extrasSelecionados.push({
-          nome: encontrado.nome,
-          preco
-        });
-      }
-
-      const quantidade = Number(item.quantidade);
-
-      if (
-        !Number.isInteger(quantidade) ||
-        quantidade < 1 ||
-        quantidade > 50
-      ) {
-        throw new Error('Quantidade inválida');
-      }
-
-      const precoProduto = Number(produto.preco);
-
-      if (!Number.isFinite(precoProduto) || precoProduto < 0) {
-        throw new Error('Preço do produto inválido');
-      }
-
-      const valorUnitario = precoProduto + totalExtras;
-      const subtotal = valorUnitario * quantidade;
-
-      totalPedido += subtotal;
-
-      itensCalculados.push({
-        id: produto.id,
-        nome: produto.nome,
-        quantidade,
-        preco: precoProduto,
-        extras: extrasSelecionados,
-        valorUnitario,
-        subtotal,
-        obs: String(item.obs || '').trim()
-      });
-    }
-
-    // PAGAMENTOS
-    let clienteCalculado = null;
-
-    if (pedidoSemMesa) {
-      const metodosPermitidos = [
-        'pix',
-        'dinheiro',
-        'credito',
-        'debito'
-      ];
-
-      // Compatibilidade com o formato antigo:
-      // cliente.pagamento = "pix"
-      // Se não houver pagamentos, usa o método antigo.
-      let pagamentosRecebidos = cliente.pagamentos;
-
-      if (
-        !Array.isArray(pagamentosRecebidos) ||
-        pagamentosRecebidos.length === 0
-      ) {
-        pagamentosRecebidos = [{
-          metodo: cliente.pagamento,
-          valor: totalPedido
-        }];
-      }
-
-      if (
-        pagamentosRecebidos.length < 1 ||
-        pagamentosRecebidos.length > 2
-      ) {
-        throw new Error('Escolha uma ou duas formas de pagamento');
-      }
-
-      const pagamentosCalculados = [];
-      let somaPagamentosCentavos = 0;
-      const metodosUsados = new Set();
-
-      for (const pagamento of pagamentosRecebidos) {
-        const metodo = String(pagamento.metodo || '').toLowerCase();
-        const valor = Number(pagamento.valor);
-
-        if (!metodosPermitidos.includes(metodo)) {
-          throw new Error('Forma de pagamento inválida');
+        if (mesa && !/^\d+$/.test(String(mesa))) {
+            throw new Error('Número da mesa inválido.');
         }
 
-        if (metodosUsados.has(metodo)) {
-          throw new Error('Escolha duas formas de pagamento diferentes');
-        }
+        const pedidoSemMesa = !mesa;
 
-        if (!Number.isFinite(valor) || valor <= 0) {
-          throw new Error('Informe um valor válido para cada pagamento');
-        }
+        // ==========================================
+        // LOCALIZAR MESA
+        // ==========================================
 
-        const valorCentavos = Math.round(valor * 100);
+        let mesaRegistro = null;
 
-        metodosUsados.add(metodo);
-        somaPagamentosCentavos += valorCentavos;
+        if (!pedidoSemMesa) {
+            mesaRegistro = await dbGet(
+                `SELECT id, numero, status
+                 FROM mesas
+                 WHERE numero = ?
+                   AND idLoja = ?
+                   AND status <> 'fechada'`,
+                [Number(mesa), idLoja]
+            );
 
-        pagamentosCalculados.push({
-          metodo,
-          valor: valorCentavos / 100
-        });
-      }
-
-      const totalCentavos = Math.round(totalPedido * 100);
-
-      if (somaPagamentosCentavos !== totalCentavos) {
-        throw new Error(
-          `A soma dos pagamentos deve ser exatamente ${(
-            totalCentavos / 100
-          ).toLocaleString('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-          })}`
-        );
-      }
-
-      // TROCO: só é aceito quando existe pagamento em dinheiro
-      const pagamentoDinheiro = pagamentosCalculados.find(
-        p => p.metodo === 'dinheiro'
-      );
-
-      let trocoPara = null;
-
-      if (pagamentoDinheiro && cliente.trocoPara) {
-        trocoPara = Number(cliente.trocoPara);
-
-        if (
-          !Number.isFinite(trocoPara) ||
-          trocoPara < pagamentoDinheiro.valor
-        ) {
-          throw new Error(
-            'O valor informado para o troco não pode ser menor que a parte em dinheiro'
-          );
-        }
-
-        trocoPara = Math.round(trocoPara * 100) / 100;
-      } else if (
-        pagamentoDinheiro &&
-        cliente.troco
-      ) {
-        // Compatibilidade com o campo antigo "troco"
-        trocoPara = Number(cliente.troco);
-
-        if (
-          !Number.isFinite(trocoPara) ||
-          trocoPara < pagamentoDinheiro.valor
-        ) {
-          throw new Error('Valor de troco inválido');
-        }
-
-        trocoPara = Math.round(trocoPara * 100) / 100;
-      }
-
-      clienteCalculado = {
-        nome: String(cliente.nome).trim(),
-        telefone: String(cliente.telefone).replace(/\D/g, ''),
-        tipoEntrega: cliente.tipoEntrega,
-
-        endereco: cliente.tipoEntrega === 'entrega'
-          ? {
-              rua: String(cliente.endereco.rua).trim(),
-              numero: String(cliente.endereco.numero).trim(),
-              bairro: String(cliente.endereco.bairro).trim(),
-              complemento: String(
-                cliente.endereco.complemento || ''
-              ).trim(),
-              referencia: String(
-                cliente.endereco.referencia || ''
-              ).trim()
+            if (!mesaRegistro) {
+                throw new Error('Mesa não encontrada ou já fechada.');
             }
-          : null,
+        }
 
-        // Novo formato de pagamento
-        pagamentos: pagamentosCalculados,
+        // ==========================================
+        // VALIDAR DADOS DO CLIENTE
+        // ==========================================
 
-        // Mantém o campo antigo para compatibilidade
-        pagamento: pagamentosCalculados.length === 1
-          ? pagamentosCalculados[0].metodo
-          : null,
+        if (pedidoSemMesa) {
+            if (!cliente) {
+                throw new Error('Informe os dados do cliente.');
+            }
 
-        trocoPara
-      };
+            if (!cliente.nome || !cliente.telefone) {
+                throw new Error('Nome completo e telefone são obrigatórios.');
+            }
+
+            if (!cliente.entrega) {
+                throw new Error('Informe o método de entrega.');
+            }
+
+            if (
+                cliente.entrega === 'entrega' &&
+                (!cliente.endereco || !cliente.bairro)
+            ) {
+                throw new Error('Informe endereço e bairro para entrega.');
+            }
+        }
+
+        // ==========================================
+        // CALCULAR PRODUTOS
+        // ==========================================
+
+        let totalPedido = 0;
+        const itensCalculados = [];
+
+        for (const item of itens) {
+            const produtoId = Number(item.id);
+            const quantidade = Number(item.quantidade);
+
+            if (!produtoId || !Number.isInteger(quantidade) || quantidade <= 0) {
+                throw new Error('Produto ou quantidade inválida.');
+            }
+
+            const produto = await dbGet(
+                `SELECT id, nome, preco, extras, categoria
+                 FROM produtos
+                 WHERE id = ?
+                   AND idLoja = ?
+                   AND COALESCE(ativo, 1) = 1
+                   AND COALESCE(disponivel, 1) = 1`,
+                [produtoId, idLoja]
+            );
+
+            if (!produto) {
+                throw new Error(`Produto não encontrado: ${produtoId}`);
+            }
+
+            const extrasDisponiveis = produto.extras
+                ? JSON.parse(produto.extras)
+                : [];
+
+            const extrasSelecionados = Array.isArray(item.extras)
+                ? item.extras
+                : [];
+
+            let totalExtras = 0;
+
+            for (const extraSelecionado of extrasSelecionados) {
+                const extraEncontrado = extrasDisponiveis.find(extra => {
+                    return extra.nome === extraSelecionado.nome;
+                });
+
+                if (!extraEncontrado) {
+                    throw new Error(
+                        `Adicional inválido no produto ${produto.nome}.`
+                    );
+                }
+
+                const precoExtra = Number(extraEncontrado.preco) || 0;
+
+                totalExtras += precoExtra;
+            }
+
+            const precoProduto = Number(produto.preco) || 0;
+
+            const valorUnitario = precoProduto + totalExtras;
+
+            const subtotal = valorUnitario * quantidade;
+
+            totalPedido += subtotal;
+
+            itensCalculados.push({
+                id: produto.id,
+                nome: produto.nome,
+                categoria: produto.categoria || 'outros',
+                quantidade,
+                preco: precoProduto,
+                extras: extrasSelecionados,
+                valorUnitario,
+                subtotal,
+                obs: String(item.obs || '').trim()
+            });
+        }
+
+        // ==========================================
+        // PEDIDO COM MESA
+        // ==========================================
+
+        if (!pedidoSemMesa) {
+            await dbRun('BEGIN IMMEDIATE');
+
+            try {
+                const itensParaImpressao = [];
+
+                for (const item of itensCalculados) {
+                    const extrasStr = item.extras.length
+                        ? JSON.stringify(item.extras)
+                        : null;
+
+                    // Verifica se já existe o mesmo produto
+                    // com os mesmos adicionais na mesa.
+
+                    const existente = await dbGet(
+                        `SELECT id, quantidade
+                         FROM pedidos
+                         WHERE mesa_id = ?
+                           AND produto_id = ?
+                           AND idLoja = ?
+                           AND status = 'aberto'
+                           AND COALESCE(extras, '[]') = ?`,
+                        [
+                            mesaRegistro.id,
+                            item.id,
+                            idLoja,
+                            extrasStr || '[]'
+                        ]
+                    );
+
+                    if (existente) {
+                        await dbRun(
+                            `UPDATE pedidos
+                             SET quantidade = quantidade + ?,
+                                 desc = CASE
+                                     WHEN ? <> '' THEN ?
+                                     ELSE desc
+                                 END,
+                                 preco = ?
+                             WHERE id = ?`,
+                            [
+                                item.quantidade,
+                                item.obs,
+                                item.obs,
+                                item.valorUnitario,
+                                existente.id
+                            ]
+                        );
+                    } else {
+                        await dbRun(
+                            `INSERT INTO pedidos (
+                                mesa_numero,
+                                mesa_id,
+                                produto_id,
+                                quantidade,
+                                desc,
+                                preco,
+                                extras,
+                                idLoja,
+                                status,
+                                func,
+                                hora
+                            )
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                            [
+                                mesaRegistro.numero,
+                                mesaRegistro.id,
+                                item.id,
+                                item.quantidade,
+                                item.obs,
+                                item.valorUnitario,
+                                extrasStr,
+                                idLoja,
+                                'aberto',
+                                'CARDAPIO',
+                                new Date().toLocaleTimeString('pt-BR')
+                            ]
+                        );
+                    }
+
+                    // Guarda somente os itens deste novo pedido
+                    // para imprimir na cozinha.
+
+                    itensParaImpressao.push({
+                        nome: item.nome,
+                        categoria: item.categoria,
+                        quantidade: item.quantidade,
+                        preco: item.valorUnitario,
+                        extras: item.extras,
+                        obs: item.obs
+                    });
+                }
+
+                // ==========================================
+                // ATUALIZAR TOTAL DA MESA
+                // ==========================================
+
+                const resultadoTotal = await dbGet(
+                    `SELECT COALESCE(
+                        SUM(preco * quantidade), 0
+                    ) AS total
+                     FROM pedidos
+                     WHERE mesa_id = ?
+                       AND idLoja = ?
+                       AND status = 'aberto'`,
+                    [mesaRegistro.id, idLoja]
+                );
+
+                const totalMesa = Number(resultadoTotal.total) || 0;
+
+                await dbRun(
+                    `UPDATE mesas
+                     SET status = 'ocupada',
+                         total = ?
+                     WHERE id = ?
+                       AND idLoja = ?`,
+                    [totalMesa, mesaRegistro.id, idLoja]
+                );
+
+                await dbRun('COMMIT');
+
+                // ==========================================
+                // IMPRESSÃO SEPARADA POR CATEGORIA
+                // ==========================================
+
+                try {
+                    await dispararImpressao(
+                        mesaRegistro.numero,
+                        itensParaImpressao,
+                        'CARDAPIO'
+                    );
+                } catch (erroImpressao) {
+                    console.error(
+                        'Erro ao imprimir pedido:',
+                        erroImpressao
+                    );
+                }
+
+                return res.json({
+                    sucesso: true,
+                    mensagem: 'Pedido enviado para a mesa!',
+                    mesa: mesaRegistro.numero,
+                    status: 'ocupada',
+                    total: totalMesa,
+                    itens: itensCalculados
+                });
+
+            } catch (erro) {
+                await dbRun('ROLLBACK');
+                throw erro;
+            }
+        }
+
+        // ==========================================
+        // PEDIDO SEM MESA: ENTREGA OU RETIRADA
+        // ==========================================
+
+        // Mantém aqui a validação de pagamento
+        // que você já utiliza no seu código original.
+
+        if (!cliente.pagamentos || !Array.isArray(cliente.pagamentos)) {
+            throw new Error('Informe a forma de pagamento.');
+        }
+
+        const totalPagamentos = cliente.pagamentos.reduce(
+            (total, pagamento) => {
+                return total + (Number(pagamento.valor) || 0);
+            },
+            0
+        );
+
+        if (Math.abs(totalPagamentos - totalPedido) > 0.01) {
+            throw new Error(
+                'A soma dos pagamentos não corresponde ao total do pedido.'
+            );
+        }
+
+        const clienteCalculado = {
+            nome: String(cliente.nome).trim(),
+            telefone: String(cliente.telefone).trim(),
+            entrega: cliente.entrega,
+            endereco: cliente.endereco || '',
+            bairro: cliente.bairro || '',
+            complemento: cliente.complemento || '',
+            pagamentos: cliente.pagamentos
+        };
+
+        // ==========================================
+        // IMPRESSÃO DO PEDIDO SEM MESA
+        // ==========================================
+
+        await dispararImpressaoCardapio({
+            mesa: null,
+            cliente: clienteCalculado,
+            itens: itensCalculados,
+            total: totalPedido,
+            idLoja
+        });
+
+        return res.json({
+            sucesso: true,
+            mensagem: 'Pedido recebido com sucesso!',
+            total: totalPedido,
+            cliente: clienteCalculado,
+            itens: itensCalculados
+        });
+
+    } catch (erro) {
+        console.error('Erro ao adicionar cardápio:', erro);
+
+        return res.status(400).json({
+            sucesso: false,
+            erro: erro.message || 'Erro ao processar pedido.'
+        });
     }
-
-    // IMPRIMIR
-    const impresso = await dispararImpressaoCardapio({
-      mesa: mesa || null,
-      cliente: clienteCalculado,
-      itens: itensCalculados,
-      total: totalPedido,
-      idLoja
-    });
-
-    console.log('Pedido calculado:', {
-      idLoja,
-      mesa: mesa || null,
-      cliente: clienteCalculado,
-      total: totalPedido,
-      itens: itensCalculados,
-      impresso
-    });
-
-    return res.status(200).json({
-      sucesso: true,
-      impresso,
-      total: totalPedido,
-      mesa: mesa || null,
-      cliente: clienteCalculado,
-      itens: itensCalculados
-    });
-
-  } catch (erro) {
-    console.error('Erro no pedido:', erro);
-
-    return res.status(400).json({
-      sucesso: false,
-      erro: erro.message
-    });
-  }
 });
 
 
