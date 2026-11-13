@@ -3,6 +3,7 @@ let isAdmin = false;
 
 
 async function aplicarNomeeLogo(){
+    const logoLoja = document.getElementById("logoLoja")
     try{
         const req = await fetch('/lojasInfo')
         const res = await req.json()
@@ -13,8 +14,15 @@ async function aplicarNomeeLogo(){
         }
         //Falta finalizar essa parte da logo !!!!!!!!
         else if(res[0].nomeLoja && res[0].logo){
+            const caminhoLogo = String(res[0].logo);
             const nome = document.getElementById("nomeLoja")
-            nome.innerHTML =  '🍔 ' + res[0].nomeLoja
+            nome.innerHTML =res[0].nomeLoja
+            logoLoja.src = /^(\/|https?:\/\/)/i.test(caminhoLogo)
+            ? caminhoLogo
+            : `/uploads/${res[0].idLoja}/${caminhoLogo}`;
+            logoLoja.onerror = () => {
+            logoLoja.hidden = true;
+            };
             carregarMesas()
         }
     }

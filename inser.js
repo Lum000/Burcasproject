@@ -1,32 +1,20 @@
-const express = require("express")
-const sqlite3 = require("sqlite3").verbose()
-const path = require("path")
-require('dotenv').config();
+const sqlite3 = require('sqlite3')
+const db = new sqlite3.Database('lanchonete.db')
 
-const cookieParser = require('cookie-parser');
+const ERRADO = 'burcaslanchonete'
+const CERTO = 'burcas-lanchonete'
 
+// tabelas que têm a coluna idLoja
+const tabelas = ['produtos', 'pedidos', 'mesas', 'usuarios']
 
-const bcrypt = require('bcrypt')
-const saltRounds = 10
+db.serialize(() => {
+  tabelas.forEach((t) => {
+    db.run(`UPDATE ${t} SET idLoja = ? WHERE idLoja = ?`, [CERTO, ERRADO], function (err) {
+      console.log(t.padEnd(10), err ? 'ERRO: ' + err.message : 'linhas alteradas: ' + this.changes)
+    })
+  })
 
-
-const jwt = require('jsonwebtoken');
-const SECRET = process.env.JWT_SECRET
-
-const multer = require("multer")
-const res = require("express/lib/response")
-
-const app = express()
-app.use(cookieParser());
-app.use(express.json())
-app.use(express.static("public"))
-
-const db = new sqlite3.Database("lanchonete.db")
-
-
-async function roda() {
-    const passwordd = '1802971610'
-    const hashedpassword = await bcrypt.hash(passwordd, saltRounds)
-    db.run(`INSERT INTO lojasInfo (idLoja,user,password) VALUES (?,?,?)`,['burcaslanchonete','lucas',`${hashedpassword}`])
-}
-roda()
+  db.all('SELECT idLoja, COUNT(*) AS n FROM produtos GROUP BY idLoja', (e, r) => {
+    console.log('\nprodutos por loja agora:', e || r)
+  })
+})

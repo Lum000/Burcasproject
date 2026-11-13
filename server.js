@@ -1206,25 +1206,87 @@ app.get("/products/:category", (req, res) => {
 
 /* ───────────── LOJA (nome / logo) ───────────── */
 
-app.post("/alterLoja", verifyToken, (req, res) => {
-  const { nomeLoja, logoLoja } = req.body
-  const idLoja = req.user.idLoja
+app.post('/alterLoja', verifyToken, upload.single('logo'), (req, res) => {
+    const { nomeLoja } = req.body;
+    const idLoja = req.user.idLoja;
 
-  if (!nomeLoja && !logoLoja) {
-    return res.json({ error: "Nenhuma informação transferida " })
-  }
+    const logoLoja = req.file
+        ? `/uploads/${idLoja}/${req.file.filename}`
+        : null;
 
-  const campos = []
-  const valores = []
-  if (nomeLoja) { campos.push('nomeLoja = ?'); valores.push(nomeLoja) }
-  if (logoLoja) { campos.push('logo = ?'); valores.push(logoLoja) }
-  valores.push(idLoja)
+    if (!nomeLoja && !logoLoja) {
+        return res.json({ error: "Nenhuma informação transferida" });
+    }
 
-  db.run(`UPDATE lojasInfo SET ${campos.join(', ')} WHERE idLoja = ?`, valores, (err) => {
-    if (err) return res.json({ error: "Não foi possivel atualizar os dados" + err.message })
-    return res.json({ success: "Informações Salvas com Sucesso !!!" })
-  })
-})
+    // Só busca a logo antiga se uma nova foi enviada
+    if (logoLoja) {
+        db.get(
+            'SELECT logo FROM lojasInfo WHERE idLoja = ?',
+            [idLoja],
+            (err, loja) => {
+                if (err) {
+                    return res.json({ error: err.message });
+                }
+
+                if (!loja) {
+                    return res.json({ error: "Loja não encontrada" });
+                }
+
+                atualizarBanco(loja.logo);
+            }
+        );
+    } else {
+        atualizarBanco(null);
+    }
+
+    function atualizarBanco(logoAntiga) {
+        const campos = [];
+        const valores = [];
+
+        if (nomeLoja) {
+            campos.push('nomeLoja = ?');
+            valores.push(nomeLoja);
+        }
+
+        if (logoLoja) {
+            campos.push('logo = ?');
+            valores.push(logoLoja);
+        }
+
+        valores.push(idLoja);
+
+        db.run(
+            `UPDATE lojasInfo SET ${campos.join(', ')} WHERE idLoja = ?`,
+            valores,
+            function (err) {
+                if (err) {
+                    return res.json({
+                        error: "Não foi possível atualizar: " + err.message
+                    });
+                }
+
+                // Apaga somente a logo anterior
+                if (logoLoja && logoAntiga && logoAntiga !== logoLoja) {
+                    const caminhoAntigo = path.join(
+                        __dirname,
+                        logoAntiga.replace(/^\/+/, '')
+                    );
+
+                    fs.unlink(caminhoAntigo, (err) => {
+                        if (err && err.code !== 'ENOENT') {
+                            console.error("Erro ao apagar logo antiga:", err);
+                        }
+                    });
+                }
+
+                return res.json({
+                    success: "Informações salvas com sucesso!",
+                    logo: logoLoja
+                });
+            }
+        );
+    }
+});
 
 /* ───────────── ADMIN: USUÁRIOS (só da própria loja) ───────────── */
 
@@ -1322,6 +1384,49 @@ app.get('/logs/:dias', verifyToken, checkRole('admin'), async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
+})
+
+
+// permite esconder produtos (ativo) ou marcar "acabou hoje" (disponivel)
+db.all("PRAGMA table_info(produtos)", (err, cols) => {
+  if (err) return
+  const nomes = cols.map(c => c.name)
+  if (!nomes.includes('ativo'))      db.run("ALTER TABLE produtos ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1")
+  if (!nomes.includes('disponivel')) db.run("ALTER TABLE produtos ADD COLUMN disponivel INTEGER NOT NULL DEFAULT 1")
+})
+
+// ── CARDÁPIO PÚBLICO (sem login, só leitura) ──
+app.get('/api/publico/:idLoja/cardapio', async (req, res) => {
+  try {
+    const idLoja = String(req.params.idLoja).trim().toLowerCase()
+
+    const loja = await dbGet(
+      "SELECT nomeLoja, idLoja, logo FROM lojasInfo WHERE idLoja = ?",
+      [idLoja]
+    )
+    if (!loja) return res.status(404).json({ message: 'Loja não encontrada.' })
+
+    const produtos = await dbAll(
+      `SELECT *
+        FROM produtos
+        WHERE LOWER(idLoja) = ? AND COALESCE(ativo, 1) = 1
+        ORDER BY categoria, nome`,
+      [idLoja]
+    )
+
+    res.json({
+      loja,
+      produtos: produtos.map(p => ({ ...p, extras: normalizarExtras(p.extras) }))
+    })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Erro ao carregar o cardápio.' })
+  }
+})
+
+// a página em si: /cardapio/burcas-lanchonete  (ou ?mesa=5)
+app.get('/cardapio/:idLoja', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'cardapio', 'index.html'))
 })
 
 /* ───────────── PÁGINA INICIAL E SERVIDOR ───────────── */

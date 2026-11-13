@@ -1,0 +1,269 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <meta name="theme-color" content="#FFD400">
+  <meta name="format-detection" content="telephone=no">
+
+  <meta
+    name="description"
+    content="Confira nosso cardápio e faça seu pedido."
+  >
+
+  <title>Cardápio</title>
+
+  <!-- Conexões antecipadas para fontes -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  >
+
+  <!-- Fontes -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/cardapio/cardapio.css">
+
+  <!-- JavaScript -->
+  <script src="/cardapio/cardapio.js" defer></script>
+
+  <style>
+    [hidden] {
+      display: none !important;
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    img {
+      max-width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="topo">
+    <img id="logo" alt="" hidden>
+
+    <div>
+      <h1 id="nomeLoja">Cardápio</h1>
+      <span id="mesaInfo" class="mesa-info" hidden></span>
+    </div>
+  </header>
+
+  <div class="barra">
+
+    <input
+      id="busca"
+      type="search"
+      placeholder="Buscar no cardápio..."
+      autocomplete="off"
+      aria-label="Buscar no cardápio"
+    >
+
+    <nav
+      id="categorias"
+      class="tabs"
+      aria-label="Categorias"
+    ></nav>
+
+  </div>
+
+  <main id="cardapio" aria-live="polite">
+
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+
+  </main>
+
+  <!-- MODAL DE PERSONALIZAÇÃO -->
+  <div
+    id="modalProduto"
+    class="modal-produto"
+    hidden
+  >
+
+    <div class="modal-conteudo">
+
+      <header class="modal-header">
+        <h2>Personalize seu pedido</h2>
+
+        <button
+          id="fecharModal"
+          type="button"
+          aria-label="Fechar"
+        >✕</button>
+      </header>
+
+      <div class="modal-corpo">
+
+        <h3 id="modalNome"></h3>
+
+        <p id="modalDescricao"></p>
+
+        <strong id="modalPrecoBase"></strong>
+
+        <div class="extras-modal">
+          <h4>Adicionais</h4>
+          <div id="listaExtras"></div>
+        </div>
+
+        <div class="observacao-modal">
+
+          <label for="observacaoProduto">
+            Observações
+          </label>
+
+          <textarea
+            id="observacaoProduto"
+            placeholder="Ex.: Sem cebola, sem tomate..."
+          ></textarea>
+
+        </div>
+
+        <div class="quantidade-modal">
+
+          <span>Quantidade</span>
+
+          <div>
+
+            <button
+              id="diminuirModal"
+              type="button"
+            >−</button>
+
+            <strong id="quantidadeModal">1</strong>
+
+            <button
+              id="aumentarModal"
+              type="button"
+            >+</button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <footer class="modal-footer">
+
+        <button
+          id="confirmarProduto"
+          type="button"
+        >
+          Adicionar ao carrinho · R$ 0,00
+        </button>
+
+      </footer>
+
+    </div>
+
+  </div>
+
+  <!-- BOTÃO FLUTUANTE DO CARRINHO -->
+  <button
+    id="abrirCarrinho"
+    class="carrinho-flutuante"
+    type="button"
+    hidden
+  >
+
+    🛒 Meu carrinho
+
+    <span id="quantidadeCarrinho">0</span>
+
+    <strong id="totalCarrinho">R$ 0,00</strong>
+
+  </button>
+
+  <!-- FUNDO ESCURO -->
+  <div
+    id="fundoCarrinho"
+    class="fundo-carrinho"
+    hidden
+  ></div>
+
+  <!-- PAINEL DO CARRINHO -->
+  <section
+    id="painelCarrinho"
+    class="painel-carrinho"
+    aria-label="Meu carrinho"
+    aria-hidden="true"
+  >
+
+    <header class="cabecalho-carrinho">
+
+      <h2>🛒 Meu pedido</h2>
+
+      <button
+        id="fecharCarrinho"
+        type="button"
+        aria-label="Fechar"
+      >✕</button>
+
+    </header>
+
+    <div
+      id="itensCarrinho"
+      class="itens-carrinho"
+    ></div>
+
+    <footer class="final-carrinho">
+
+      <div class="linha-total">
+
+        <span>Total do pedido</span>
+
+        <strong id="totalFinal">R$ 0,00</strong>
+
+      </div>
+
+      <button
+        id="finalizarPedido"
+        type="button"
+      >
+        Finalizar pedido →
+      </button>
+
+    </footer>
+
+  </section>
+
+  <footer class="rodape-pagina">
+    Chame o garçom para fazer seu pedido 🙂
+  </footer>
+
+</body>
+</html>
