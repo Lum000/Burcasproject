@@ -1107,6 +1107,33 @@ textarea:focus { border-color: var(--amarelo); }
   }
 }
 
+.pao-container {
+    margin: 15px 0;
+}
+
+.pao-container label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--texto);
+}
+
+.pao-container select {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    color: var(--texto);
+    font-size: 14px;
+    outline: none;
+}
+
+.pao-container select:focus {
+    border-color: var(--amarelo);
+}
+
 
 @media (hover: hover) {
   .btn-adicionar:hover, .btn-fechar:hover, .btn-imprimir:hover,

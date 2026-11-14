@@ -1,3 +1,4 @@
+
 import { state } from '../state/state.js'
 
 import { removerDoCarrinhoTemp } from './cart.js'
@@ -30,22 +31,33 @@ export function renderizarCarrinhoTemporario(){
     state.carrinhoTemporario.forEach((item,index)=>{
 
         const subtotal =
-            item.precoFinal * item.quantidade
+            Number(item.precoFinal || item.preco || 0) *
+            Number(item.quantidade || 1)
 
         total += subtotal
+
         const extrasArray = Array.isArray(item.extras)
-        ? item.extras
-        : JSON.parse(item.extras || '[]')
+            ? item.extras
+            : JSON.parse(item.extras || '[]')
 
         const extrasTexto = extrasArray.length > 0
 
-        ? extrasArray.map(extra =>
+            ? extrasArray.map(extra =>
+                `${extra.nome} (+R$ ${Number(extra.preco).toFixed(2)})`
+            ).join(', ')
 
-            `${extra.nome} (+R$ ${Number(extra.preco).toFixed(2)})`
+            : 'Sem extras'
 
-        ).join(', ')
+        // Nome do pão
+        const nomesPao = {
+            hamburguer: 'Pão de hambúrguer',
+            australiano: 'Pão australiano',
+            brioche: 'Pão brioche'
+        }
 
-        : 'Sem extras'
+        const paoTexto = item.pao
+            ? nomesPao[item.pao] || item.pao
+            : ''
 
         listaLateral.innerHTML += `
 
@@ -63,7 +75,7 @@ export function renderizarCarrinhoTemporario(){
 
                             <p>
                                 ${item.quantidade}x
-                                R$ ${item.precoFinal.toFixed(2)}
+                                R$ ${Number(item.precoFinal || item.preco || 0).toFixed(2)}
                             </p>
 
                         </div>
@@ -81,14 +93,18 @@ export function renderizarCarrinhoTemporario(){
 
                         <small>
 
+                            ${
+                                paoTexto
+                                ? `<strong>Pão:</strong> ${paoTexto}<br>`
+                                : ''
+                            }
+
                             ${extrasTexto}
 
                             ${
                                 item.obs
-                                ?
-                                `<br>Obs: ${item.obs}`
-                                :
-                                ''
+                                ? `<br>Obs: ${item.obs}`
+                                : ''
                             }
 
                         </small>
@@ -116,7 +132,7 @@ export function renderizarCarrinhoTemporario(){
             btn.addEventListener('click', ()=>{
 
                 removerDoCarrinhoTemp(
-                    btn.dataset.index
+                    Number(btn.dataset.index)
                 )
 
             })

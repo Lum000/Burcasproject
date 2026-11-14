@@ -1,5 +1,5 @@
 const IMAGENS_PADRAO = {
-  lanches:    '../imgs/padrao/lanche.png' ,
+  lanches:    '../imgs/padrao/lanches.png' ,
   porcoes:    '../imgs/padrao/porcao.png',
   bebidas:    '../imgs/padrao/bebida.png',
   sobremesas: '../imgs/padrao/sobremesa.png',

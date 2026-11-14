@@ -1,6 +1,5 @@
-import {
-    state
-} from '../state/state.js'
+
+import { state } from '../state/state.js'
 
 import {
     adicionarAoCarrinho
@@ -9,102 +8,236 @@ import {
 let precoFinalComExtras = 0
 
 export function openProdModal(botao) {
+
     document.body.style.overflow = "hidden"
-    const id = botao.dataset.id;
-    const nome = botao.dataset.nome;
-    const precoBase = parseFloat(botao.dataset.preco); // Preço original do produto
-    const img = botao.dataset.img;
-    const descricao = botao.dataset.desc;
-    
-    let extras = [];
+
+    const id = botao.dataset.id
+    const nome = botao.dataset.nome
+    const precoBase = parseFloat(botao.dataset.preco) || 0
+    const img = botao.dataset.img
+    const descricao = botao.dataset.desc
+    const categoria = botao.dataset.categoria
+
+    let extras = []
+
     try {
-        extras = JSON.parse(botao.dataset.extras);
-    } catch (e) {
-        extras = [];
+        extras = JSON.parse(botao.dataset.extras || '[]')
+    } catch {
+        extras = []
     }
 
-    // RESET DE ESTADO DO MODAL
-    state.listaExtras = []; 
-    let valorExtrasAcumulado = 0;
-    document.getElementById("modalObs").value = ""; // Limpa observação anterior
+    // RESETAR ESTADO
+    state.listaExtras = []
 
-    // Interface
-    document.getElementById("productModal").style.display = "flex";
-    document.getElementById("modalImg").src = "/uploads/" + img;
-    document.getElementById("modalNome").innerText = nome;
-    document.getElementById("modalDescricao").innerText = descricao;
-    document.getElementById("modalPreco").innerText = precoBase.toFixed(2);
+    let valorExtrasAcumulado = 0
 
-    const extradiv = document.querySelector(".extras");
-    extradiv.innerHTML = ""; 
-    extras.sort((a, b) => parseFloat(b.preco) - parseFloat(a.preco));
+    document.getElementById("modalObs").value = ""
+    document.getElementById("qty_input").value = 1
 
-    // Renderiza Extras
+    // ABRIR MODAL
+    document.getElementById("productModal").style.display = "flex"
+
+    document.getElementById("modalImg").src = img.startsWith('/uploads/')
+        ? img
+        : "/uploads/" + img
+
+    document.getElementById("modalNome").innerText = nome
+    document.getElementById("modalDescricao").innerText = descricao
+    document.getElementById("modalPreco").innerText = precoBase.toFixed(2)
+
+    // CONFIGURAR PÃO
+    const paoContainer = document.getElementById("paoContainer")
+    const selectPao = document.getElementById("modalPao")
+
+    const categoriaNormalizada = (categoria || '')
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+
+    const ehLanche = categoriaNormalizada === "lanches"
+
+    let paoPadrao = ""
+
+    if (paoContainer && selectPao) {
+
+        paoContainer.style.display = ehLanche ? "block" : "none"
+
+        if (ehLanche) {
+
+            const nomeNormalizado = nome
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase()
+
+            // Detecta se o lanche é australiano
+            if (nomeNormalizado.includes("australiano")) {
+                selectPao.value = "australiano"
+            } else {
+                selectPao.value = "hamburguer"
+            }
+
+            // Guarda o pão original do lanche
+            paoPadrao = selectPao.value
+        }
+    }
+
+    // RENDERIZAR EXTRAS
+    const extradiv = document.querySelector(".extras")
+
+    extradiv.innerHTML = ""
+
+    extras.sort((a, b) =>
+        parseFloat(b.preco) - parseFloat(a.preco)
+    )
+
     extras.forEach(item => {
-        const label = document.createElement("label");
-        label.className = "extra-item";
+
+        const label = document.createElement("label")
+
+        label.className = "extra-item"
+
         label.innerHTML = `
-            <input type="checkbox" value="${item.preco}" data-name="${item.nome}">
-            ${item.nome} + R$ ${parseFloat(item.preco).toFixed(2)}
-        `;
-        
-        // Evento de mudança no checkbox
-        const input = label.querySelector('input');
-        input.addEventListener('change', (e) => {
-            const precoExtra = parseFloat(e.target.value);
-            const nomeExtra = e.target.getAttribute('data-name');
+            <input
+                type="checkbox"
+                value="${Number(item.preco) || 0}"
+                data-name="${item.nome}"
+            >
+
+            ${item.nome} + R$ ${Number(item.preco || 0).toFixed(2)}
+        `
+
+        const input = label.querySelector("input")
+
+        input.addEventListener("change", (e) => {
+
+            const precoExtra = Number(e.target.value) || 0
+            const nomeExtra = e.target.dataset.name
 
             if (e.target.checked) {
+
                 state.listaExtras.push({
                     nome: nomeExtra,
                     preco: precoExtra
                 })
-                valorExtrasAcumulado += precoExtra;
+
+                valorExtrasAcumulado += precoExtra
+
             } else {
-                state.listaExtras = state.listaExtras.filter(e => e.nome !== nomeExtra)
-                valorExtrasAcumulado -= precoExtra;
+
+                state.listaExtras = state.listaExtras.filter(
+                    extra => extra.nome !== nomeExtra
+                )
+
+                valorExtrasAcumulado -= precoExtra
             }
 
-            // Atualiza o preço exibido no modal em tempo real
-            const totalModal = precoBase + valorExtrasAcumulado;
-            state.valorTotalComExtras = totalModal;
+            atualizarPrecoModal()
+        })
 
-            document.getElementById("modalPreco").innerText = totalModal.toFixed(2);
-        });
+        extradiv.appendChild(label)
+    })
 
-        extradiv.appendChild(label);
-    });
+    // ATUALIZAR PREÇO EXIBIDO
+    function atualizarPrecoModal() {
 
-    const button = document.getElementById("addprod");
+        const paoAtual = ehLanche && selectPao
+            ? selectPao.value
+            : ""
 
+        const adicionalPao = (
+            ehLanche && paoAtual !== paoPadrao
+        ) ? 1 : 0
+
+        const totalModal =
+            precoBase +
+            valorExtrasAcumulado +
+            adicionalPao
+
+        state.valorTotalComExtras = totalModal
+
+        document.getElementById("modalPreco").innerText =
+            totalModal.toFixed(2).replace('.', ',')
+    }
+
+    // ATUALIZA PREÇO QUANDO TROCAR O PÃO
+    if (selectPao) {
+
+        selectPao.onchange = atualizarPrecoModal
+    }
+
+    // BOTÃO ADICIONAR AO CARRINHO
+    const button = document.getElementById("addprod")
 
     button.onclick = function() {
-        const obs = document.getElementById('modalObs').value.trim();
-        const qty = document.getElementById('qty_input');
 
-        precoFinalComExtras = precoBase + valorExtrasAcumulado;
-        
+        const obs =
+            document.getElementById("modalObs").value.trim()
 
+        const qty =
+            document.getElementById("qty_input")
+
+        const quantidade = Math.max(
+            1,
+            parseInt(qty.value) || 1
+        )
+
+        const paoEscolhido = ehLanche && selectPao
+            ? selectPao.value
+            : ""
+
+        // Calcula adicional do pão
+        const adicionalPao = (
+            ehLanche && paoEscolhido !== paoPadrao
+        ) ? 1 : 0
+
+        // Copia os extras selecionados
+        const extrasSelecionados = [
+            ...state.listaExtras
+        ]
+
+        // Adiciona a troca de pão como extra
+        if (adicionalPao > 0) {
+
+            const nomePao = selectPao.options[
+                selectPao.selectedIndex
+            ].text
+
+            extrasSelecionados.push({
+                nome: `Troca de pão para ${nomePao}`,
+                preco: adicionalPao
+            })
+        }
+
+        precoFinalComExtras =
+            precoBase +
+            valorExtrasAcumulado +
+            adicionalPao
+
+        // Envia para o carrinho
         adicionarAoCarrinho(
             id,
             nome,
             precoBase,
-            qty.value,
+            quantidade,
             obs,
-            [...state.listaExtras]
-        );
-        
-        closeProdModal();
-        qty.value = 1;
-    };
+            extrasSelecionados,
+            paoEscolhido
+        )
+
+        closeProdModal()
+
+        qty.value = 1
+    }
 }
 
-export function closeProdModal(){
-    document.getElementById("productModal").style.display="none"
+export function closeProdModal() {
 
-    const modalPrincipal = document.getElementById("productAlert")
+    document.getElementById("productModal").style.display = "none"
 
-    if(modalPrincipal.style.display !== "flex"){
+    const modalPrincipal =
+        document.getElementById("productAlert")
+
+    if (modalPrincipal.style.display !== "flex") {
         document.body.style.overflow = "auto"
     }
 }

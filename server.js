@@ -1827,7 +1827,7 @@ app.post('/adicionarCardapio', async (req, res) => {
 
             for (const extraSelecionado of extrasSelecionados) {
                 const extraEncontrado = extrasDisponiveis.find(extra => {
-                    return extra.nome === extraSelecionado.nome;
+                    return extra.nome === extraSelecionado.nome,extra.preco === extraSelecionado.preo;
                 });
 
                 if (!extraEncontrado) {

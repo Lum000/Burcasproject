@@ -63,6 +63,8 @@ export async function getProducts(id, mesa){
         const descObs = await fetch('/getExtras/' + item.id)
 
         const dadosObs = await descObs.json()
+        
+        console.log(dadosObs)
 
         const extrasNorm = normalizarExtras(dadosObs.extras)
 
@@ -70,11 +72,13 @@ export async function getProducts(id, mesa){
 
         ? extrasNorm.map(extra =>
 
-            ` ${extra.nome} (+R$ ${Number(extra.preco).toFixed(2)})`
+            ` ${extra.nome} (+R$ ${Number(dadosObs.preco).toFixed(2)})`
 
         ).join(', ')
 
         : ''
+
+        console.log(extrasNorm)
 
         const precoExtra =
             parseFloat(dadosObs.preco) || 0
@@ -86,6 +90,7 @@ export async function getProducts(id, mesa){
             precoExtra * quantidade
 
         const div = document.createElement('div')
+        console.log(imagemPadrao(dados.categoria))
 
         div.innerHTML = `
             <div class="pedido-item">

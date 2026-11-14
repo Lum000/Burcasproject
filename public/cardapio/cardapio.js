@@ -873,7 +873,8 @@
         obs: item.obs,
 
         extras: item.extras.map(extra => ({
-          nome: extra.nome
+          nome: extra.nome,
+          preco: extra.preco
         }))
       }))
     };
