@@ -18,6 +18,8 @@ export function openProdModal(botao) {
     const descricao = botao.dataset.desc
     const categoria = botao.dataset.categoria
 
+    const paoPadrao = botao.dataset.paoPadrao || 'tradicional'
+
     let extras = []
 
     try {
@@ -43,7 +45,6 @@ export function openProdModal(botao) {
 
     document.getElementById("modalNome").innerText = nome
     document.getElementById("modalDescricao").innerText = descricao
-    document.getElementById("modalPreco").innerText = precoBase.toFixed(2)
 
     // CONFIGURAR PÃO
     const paoContainer = document.getElementById("paoContainer")
@@ -56,28 +57,13 @@ export function openProdModal(botao) {
 
     const ehLanche = categoriaNormalizada === "lanches"
 
-    let paoPadrao = ""
-
     if (paoContainer && selectPao) {
 
         paoContainer.style.display = ehLanche ? "block" : "none"
 
+        // Seleciona automaticamente o pão padrão do produto
         if (ehLanche) {
-
-            const nomeNormalizado = nome
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .toLowerCase()
-
-            // Detecta se o lanche é australiano
-            if (nomeNormalizado.includes("australiano")) {
-                selectPao.value = "australiano"
-            } else {
-                selectPao.value = "hamburguer"
-            }
-
-            // Guarda o pão original do lanche
-            paoPadrao = selectPao.value
+            selectPao.value = paoPadrao
         }
     }
 
@@ -137,12 +123,12 @@ export function openProdModal(botao) {
         extradiv.appendChild(label)
     })
 
-    // ATUALIZAR PREÇO EXIBIDO
+    // ATUALIZAR PREÇO
     function atualizarPrecoModal() {
 
         const paoAtual = ehLanche && selectPao
             ? selectPao.value
-            : ""
+            : paoPadrao
 
         const adicionalPao = (
             ehLanche && paoAtual !== paoPadrao
@@ -159,11 +145,13 @@ export function openProdModal(botao) {
             totalModal.toFixed(2).replace('.', ',')
     }
 
-    // ATUALIZA PREÇO QUANDO TROCAR O PÃO
+    // ATUALIZA PREÇO AO TROCAR PÃO
     if (selectPao) {
-
         selectPao.onchange = atualizarPrecoModal
     }
+
+    // MOSTRAR PREÇO INICIAL CORRETO
+    atualizarPrecoModal()
 
     // BOTÃO ADICIONAR AO CARRINHO
     const button = document.getElementById("addprod")
@@ -185,17 +173,15 @@ export function openProdModal(botao) {
             ? selectPao.value
             : ""
 
-        // Calcula adicional do pão
         const adicionalPao = (
             ehLanche && paoEscolhido !== paoPadrao
         ) ? 1 : 0
 
-        // Copia os extras selecionados
         const extrasSelecionados = [
             ...state.listaExtras
         ]
 
-        // Adiciona a troca de pão como extra
+        // REGISTRAR TROCA DE PÃO COMO EXTRA
         if (adicionalPao > 0) {
 
             const nomePao = selectPao.options[
@@ -213,7 +199,6 @@ export function openProdModal(botao) {
             valorExtrasAcumulado +
             adicionalPao
 
-        // Envia para o carrinho
         adicionarAoCarrinho(
             id,
             nome,

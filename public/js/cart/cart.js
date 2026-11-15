@@ -19,12 +19,12 @@ function lerExtras(extras) {
     return []
 }
 
-// Compara os adicionais
+// Compara os adicionais considerando nome e preço
 function chaveExtras(extras) {
     return lerExtras(extras)
-        .map(e => e.nome)
+        .map(e => `${e.nome}:${Number(e.preco || 0)}`)
         .sort()
-        .join(',')
+        .join('|')
 }
 
 export function adicionarAoCarrinho(
@@ -36,30 +36,37 @@ export function adicionarAoCarrinho(
     extras = [],
     pao = ''
 ) {
-    quantidade = Number(quantidade)
-    precoBase = Number(precoBase)
+    quantidade = Math.max(1, Number(quantidade) || 1)
+    precoBase = Number(precoBase) || 0
     extras = lerExtras(extras)
+    pao = pao || ''
 
+    // Soma dos adicionais por unidade
     const totalExtras = extras.reduce((acc, extra) => {
-        return acc + Number(extra.preco || 0)
+        return acc + (Number(extra.preco) || 0)
     }, 0)
 
+    // Preço unitário final
     const precoFinal = precoBase + totalExtras
 
     const extrasKey = chaveExtras(extras)
 
+    // Verifica se já existe um item exatamente igual
     const itemExistente = state.carrinhoTemporario.find(item => {
         return (
-            item.id == id &&
-            item.obs == obs &&
-            item.pao == pao &&
-            chaveExtras(item.extras) == extrasKey
+            String(item.id) === String(id) &&
+            item.obs === obs &&
+            (item.pao || '') === pao &&
+            chaveExtras(item.extras) === extrasKey
         )
     })
 
     if (itemExistente) {
+
         itemExistente.quantidade += quantidade
+
     } else {
+
         state.carrinhoTemporario.push({
             id,
             nome,

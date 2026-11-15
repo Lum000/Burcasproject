@@ -450,6 +450,20 @@
           </select>
         </div>
       </div>
+      <!-- CONFIGURAÇÃO DO PÃO -->
+      <div class="field" id="campoPaoPadrao">
+        <label>🍞 Pão padrão deste lanche</label>
+
+        <select id="paoPadrao">
+          <option value="hamburguer">Pão de hambúrguer</option>
+          <option value="australiano">Pão australiano</option>
+          <option value="brioche">Pão brioche</option>
+        </select>
+
+        <small style="display:block;color:var(--texto-muted);margin-top:7px;font-size:11px;">
+          A troca para outro tipo de pão terá acréscimo de R$ 1,00.
+        </small>
+      </div>
     </div>
 
     <!-- EXTRAS -->
@@ -502,6 +516,21 @@
   const listaInputs     = document.getElementById('lista-inputs-extras');
   const toggleRow       = document.getElementById('toggle-extras');
 
+
+  const categoriaSelect = document.getElementById('categoria');
+const campoPaoPadrao = document.getElementById('campoPaoPadrao');
+
+function atualizarCampoPao() {
+    const ehLanche = categoriaSelect.value === 'lanches';
+
+    campoPaoPadrao.style.display = ehLanche ? 'block' : 'none';
+}
+
+categoriaSelect.addEventListener('change', atualizarCampoPao);
+
+// Executa ao abrir a página
+atualizarCampoPao();
+
   function toggleExtras() {
     const ativo = !checkboxExtras.checked;
     checkboxExtras.checked = ativo;
@@ -550,6 +579,9 @@
       showToast('Preencha o nome e o preço.', 'error');
       return;
     }
+    const paoPadrao = categoria === 'lanches'
+    ? document.getElementById('paoPadrao').value
+    : null;
 
     const extras = [];
     if (checkboxExtras.checked) {
@@ -561,6 +593,7 @@
     }
 
     const formData = new FormData();
+    formData.append('pao_padrao', paoPadrao || '');
     formData.append('nome', nome);
     formData.append('descricao', descricao);
     formData.append('preco', preco);

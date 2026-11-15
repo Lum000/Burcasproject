@@ -315,6 +315,7 @@ function abrirEdicaoProduto(id) {
   document.getElementById('edit-preco').value     = p.preco || '';
   document.getElementById('edit-descricao').value = p.descricao || '';
   document.getElementById('edit-categoria').value = p.categoria || 'lanches';
+  document.getElementById('edit-pao-padrao').value = p.paoPadrao || 'tradicional';
 
   const lista = document.getElementById('edit-extras-lista');
   lista.innerHTML = '';
@@ -369,6 +370,7 @@ async function salvarEdicao() {
   const preco     = document.getElementById('edit-preco').value;
   const descricao = document.getElementById('edit-descricao').value.trim();
   const categoria = document.getElementById('edit-categoria').value;
+  const paoPadrao = document.getElementById('edit-pao-padrao').value;
   const imgFile   = document.getElementById('edit-img-input').files[0];
 
   if (!nome || !preco) return showToast('Nome e preço são obrigatórios.', 'error');
@@ -381,6 +383,7 @@ async function salvarEdicao() {
   });
 
   const formData = new FormData();
+  formData.append('paoPadrao', paoPadrao);
   formData.append('nome',      nome);
   formData.append('preco',     preco);
   formData.append('descricao', descricao);

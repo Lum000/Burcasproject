@@ -128,6 +128,7 @@ db.serialize(() => {
       descricao TEXT NOT NULL,
       categoria TEXT,
       idLoja TEXT NOT NULL,
+      paoPadrao TEXT DEFAULT 'tradicional',
       preco REAL
     )
   `)
@@ -675,6 +676,7 @@ function criarPrinter() {
 }
 
 
+
 async function dispararImpressao(mesa_numero, itens, func) {
     try {
         const printer = criarPrinter();
@@ -701,6 +703,14 @@ async function dispararImpressao(mesa_numero, itens, func) {
             if (atual) printer.println(atual);
         }
 
+        function normalizarCategoria(categoria) {
+            return String(categoria || "")
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase()
+                .trim();
+        }
+
         function normalizarLista(extras) {
             if (!extras) return [];
 
@@ -715,36 +725,57 @@ async function dispararImpressao(mesa_numero, itens, func) {
             return Array.isArray(extras) ? extras : [];
         }
 
-        // Agrupa os produtos por categoria
+        // Ordem fixa de impressão
         const grupos = {
-            lanches: { titulo: "LANCHES", itens: [] },
             porcoes: { titulo: "PORCOES", itens: [] },
+            lanches: { titulo: "LANCHES", itens: [] },
             bebidas: { titulo: "BEBIDAS", itens: [] },
             sobremesas: { titulo: "SOBREMESAS", itens: [] },
             outros: { titulo: "OUTROS", itens: [] }
         };
 
+        // Separa os produtos por categoria
         (itens || []).forEach(item => {
-            const categoria = String(item.categoria || "")
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .toLowerCase()
-                .trim();
+            const categoria = normalizarCategoria(item.categoria);
 
-            const grupo = grupos[categoria] ? categoria : "outros";
+            let grupo = "outros";
+
+            if (
+                categoria === "porcoes" ||
+                categoria === "porcao"
+            ) {
+                grupo = "porcoes";
+            } else if (categoria === "lanches") {
+                grupo = "lanches";
+            } else if (categoria === "bebidas") {
+                grupo = "bebidas";
+            } else if (categoria === "sobremesas") {
+                grupo = "sobremesas";
+            }
 
             grupos[grupo].itens.push(item);
         });
 
-        const gruposComItens = Object.values(grupos)
+        // Mantém a ordem definida acima e remove categorias vazias
+        const ordemImpressao = [
+            "porcoes",
+            "lanches",
+            "bebidas",
+            "sobremesas",
+            "outros"
+        ];
+
+        const gruposComItens = ordemImpressao
+            .map(nome => grupos[nome])
             .filter(grupo => grupo.itens.length > 0);
 
-        // Imprime cada categoria em um papel separado
-        for (const grupo of gruposComItens) {
+        // Imprime uma categoria inteira por vez
+        for (let i = 0; i < gruposComItens.length; i++) {
+            const grupo = gruposComItens[i];
 
             printer.clear();
 
-            // Cabeçalho
+            // CABEÇALHO
             printer.alignCenter();
             printer.bold(true);
             printer.setTextSize(1, 1);
@@ -760,11 +791,12 @@ async function dispararImpressao(mesa_numero, itens, func) {
             printer.println(linha);
             printer.bold(false);
 
-            // Mesa e operador
+            // MESA E OPERADOR
             printer.alignLeft();
             printer.bold(true);
             printer.setTextSize(1, 1);
             printer.println(`MESA: ${mesa_numero || "--"}`);
+
             printer.setTextSize(0, 0);
             printer.bold(false);
 
@@ -778,7 +810,7 @@ async function dispararImpressao(mesa_numero, itens, func) {
 
             printer.println(linhaFina);
 
-            // Produtos
+            // PRODUTOS DA CATEGORIA
             grupo.itens.forEach(item => {
                 const quantidade = Number(item.quantidade || 1);
                 const nome = String(item.nome || "PRODUTO").toUpperCase();
@@ -786,10 +818,11 @@ async function dispararImpressao(mesa_numero, itens, func) {
                 printer.bold(true);
                 printer.setTextSize(1, 1);
                 imprimirTexto(`${quantidade}x ${nome}`);
+
                 printer.setTextSize(0, 0);
                 printer.bold(false);
 
-                // Adicionais
+                // ADICIONAIS
                 const extras = normalizarLista(item.extras);
 
                 if (extras.length) {
@@ -809,7 +842,7 @@ async function dispararImpressao(mesa_numero, itens, func) {
                     });
                 }
 
-                // Observações
+                // OBSERVAÇÕES
                 const obs = String(
                     item.obs ||
                     item.observacao ||
@@ -821,27 +854,29 @@ async function dispararImpressao(mesa_numero, itens, func) {
                     printer.bold(true);
                     printer.println("OBSERVACAO:");
                     printer.bold(false);
+
                     imprimirTexto(obs.toUpperCase());
                 }
 
                 printer.println(linhaFina);
             });
 
-            // Identificação do fim da categoria
+            // FINAL DA CATEGORIA
             printer.alignCenter();
             printer.bold(true);
             printer.println(`FIM - ${grupo.titulo}`);
             printer.bold(false);
 
-            // Avança e faz o corte físico
+            // AVANÇA E CORTA O PAPEL
             printer.newLine();
             printer.newLine();
             printer.cut();
 
-            // Pequena pausa entre as impressões
+            // ENVIA ESTA CATEGORIA PARA A IMPRESSORA
             await printer.execute();
 
-            if (gruposComItens.indexOf(grupo) !== gruposComItens.length - 1) {
+            // Pequena pausa entre os grupos
+            if (i < gruposComItens.length - 1) {
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
         }
@@ -850,6 +885,7 @@ async function dispararImpressao(mesa_numero, itens, func) {
         console.error("Erro na impressora:", error);
     }
 }
+
 
 
 
@@ -1396,55 +1432,154 @@ app.get("/historico-filtrado/:dias", verifyToken, async (req, res) => {
 
 /* ───────────── PRODUTOS ───────────── */
 
+
 app.post("/addProduct", verifyToken, upload.single('imagem'), (req, res) => {
-  const { nome, preco, descricao, categoria, extras } = req.body
-  const idLoja = req.user.idLoja
+  const {
+    nome,
+    preco,
+    descricao,
+    categoria,
+    extras,
+    paoPadrao
+  } = req.body;
+
+  const idLoja = req.user.idLoja;
 
   if (!nome || !preco || !categoria) {
-    return res.status(400).json({ message: 'Campos obrigatórios faltando' })
+    return res.status(400).json({
+      message: 'Campos obrigatórios faltando'
+    });
   }
 
-  let extrasJSON = '[]'
+  let extrasJSON = '[]';
+
   try {
-    extrasJSON = JSON.stringify(JSON.parse(extras))
+    extrasJSON = JSON.stringify(
+      JSON.parse(extras || '[]')
+    );
   } catch {
-    extrasJSON = '[]'
+    extrasJSON = '[]';
   }
 
-  const imagemPath = req.file ? `${idLoja}/${req.file.filename}` : null
+  const pao = paoPadrao || 'tradicional';
 
-  const sql = "INSERT INTO produtos (nome, preco, descricao, categoria, img, extras, idLoja) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  const imagemPath = req.file
+    ? `${idLoja}/${req.file.filename}`
+    : null;
 
-  db.run(sql, [nome, preco, descricao, categoria, imagemPath, extrasJSON, idLoja], function (err) {
-    if (err) return res.status(500).json({ message: 'Erro ao salvar: ' + err.message })
-    res.status(200).json({ message: 'Produto cadastrado!', id: this.lastID })
-  })
-})
-
-app.put('/produto/:id', verifyToken, checkRole('admin'), upload.single('imagem'), (req, res) => {
-  const { nome, preco, descricao, categoria, extras } = req.body
-  const idLoja = req.user.idLoja
-
-  const campos = ['nome = ?', 'preco = ?', 'descricao = ?', 'categoria = ?', 'extras = ?']
-  const valores = [nome, preco, descricao, categoria, extras]
-
-  if (req.file) {
-    campos.push('img = ?')
-    valores.push(`${idLoja}/${req.file.filename}`)
-  }
-
-  valores.push(req.params.id, idLoja)
+  const sql = `
+    INSERT INTO produtos
+    (
+      nome,
+      preco,
+      descricao,
+      categoria,
+      img,
+      extras,
+      paoPadrao,
+      idLoja
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `;
 
   db.run(
-    `UPDATE produtos SET ${campos.join(', ')} WHERE id = ? AND idLoja = ?`,
+    sql,
+    [
+      nome,
+      preco,
+      descricao,
+      categoria,
+      imagemPath,
+      extrasJSON,
+      pao,
+      idLoja
+    ],
+    function (err) {
+      if (err) {
+        return res.status(500).json({
+          message: 'Erro ao salvar: ' + err.message
+        });
+      }
+
+      res.status(200).json({
+        message: 'Produto cadastrado!',
+        id: this.lastID
+      });
+    }
+  );
+});
+
+
+app.put('/produto/:id', verifyToken, checkRole('admin'), upload.single('imagem'), (req, res) => {
+
+  const {
+    nome,
+    preco,
+    descricao,
+    categoria,
+    extras,
+    paoPadrao
+  } = req.body;
+
+  const idLoja = req.user.idLoja;
+
+  let extrasJSON = '[]';
+
+  try {
+    extrasJSON = JSON.stringify(
+      JSON.parse(extras || '[]')
+    );
+  } catch {
+    extrasJSON = '[]';
+  }
+
+  const campos = [
+    'nome = ?',
+    'preco = ?',
+    'descricao = ?',
+    'categoria = ?',
+    'extras = ?',
+    'paoPadrao = ?'
+  ];
+
+  const valores = [
+    nome,
+    preco,
+    descricao,
+    categoria,
+    extrasJSON,
+    paoPadrao || 'tradicional'
+  ];
+
+  if (req.file) {
+    campos.push('img = ?');
+    valores.push(`${idLoja}/${req.file.filename}`);
+  }
+
+  valores.push(req.params.id, idLoja);
+
+  db.run(
+    `UPDATE produtos SET ${campos.join(', ')}
+     WHERE id = ? AND idLoja = ?`,
     valores,
     function (err) {
-      if (err) return res.status(500).json({ message: err.message })
-      if (this.changes === 0) return res.status(404).json({ message: 'Produto não encontrado' })
-      return res.json({ ok: true })
+      if (err) {
+        return res.status(500).json({
+          message: err.message
+        });
+      }
+
+      if (this.changes === 0) {
+        return res.status(404).json({
+          message: 'Produto não encontrado'
+        });
+      }
+
+      return res.json({ ok: true });
     }
-  )
-})
+  );
+});
+
 
 app.delete('/produto/:id', verifyToken, checkRole('admin'), async (req, res) => {
   const idLoja = req.user.idLoja

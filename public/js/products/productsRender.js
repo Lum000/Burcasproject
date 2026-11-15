@@ -17,20 +17,24 @@ export function renderProducts(lista, categoriaAtual = '') {
 
     let htmlGerado = ''
 
+
     lista.forEach(produto => {
 
-        const categoria = produto.categoria || categoriaAtual
+        const categoria = produto.categoria || categoriaAtual;
 
-        // foto do produto ou a padrão da categoria
-        const src = imagemProduto({ ...produto, categoria })
-        const padrao = imagemPadrao(categoria)
+        // Foto do produto ou imagem padrão da categoria
+        const src = imagemProduto({ ...produto, categoria });
+        const padrao = imagemPadrao(categoria);
 
-        const extrasStr = produto.extras || '[]'
-        const descricaoStr = produto.descricao || ''
+        const extrasStr = produto.extras || '[]';
+        const descricaoStr = produto.descricao || '';
+
+        // Pão padrão cadastrado no produto
+        const paoPadrao = produto.paoPadrao || 'tradicional';
 
         const precoFormatado = Number(produto.preco || 0)
             .toFixed(2)
-            .replace('.', ',')
+            .replace('.', ',');
 
         htmlGerado += `
             <div class="product-item">
@@ -59,13 +63,15 @@ export function renderProducts(lista, categoriaAtual = '') {
                     data-categoria="${esc(categoria)}"
                     data-desc="${esc(descricaoStr)}"
                     data-extras="${esc(extrasStr)}"
+                    data-pao-padrao="${esc(paoPadrao)}"
                 >
                     Adicionar
                 </button>
 
             </div>
-        `
-    })
+        `;
+    });
+
 
     divProducts.innerHTML = htmlGerado
 

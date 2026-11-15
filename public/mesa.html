@@ -304,15 +304,21 @@
                 <span id="modalPreco"></span>
 
             </div>
-            <div class="pao-container">
+
+            <div class="pao-container" id="pao-container">
                 <label for="modalPao">Tipo de pão</label>
 
                 <select id="modalPao">
-                    <option value="hamburguer">Pão de hambúrguer</option>
+                    <option value="tradicional">Pão tradicional</option>
                     <option value="australiano">Pão australiano</option>
                     <option value="brioche">Pão brioche</option>
                 </select>
+
+                <small id="pao-aviso">
+                    Troca de pão: + R$ 1,00
+                </small>
             </div>
+
 
             <div class="extras"></div>
 
@@ -327,19 +333,40 @@
 
             </div>
 
+            
             <div class="qty_class">
+                <label for="qty_input">Quantidade</label>
 
-                <label for="qty_input">
-                    Quantidade:
-                </label>
+                <div class="qty-control">
+                    <button
+                        type="button"
+                        class="qty-btn"
+                        id="qtyMinus"
+                        aria-label="Diminuir quantidade"
+                    >
+                        −
+                    </button>
 
-                <input
-                    type="number"
-                    value="1"
-                    id="qty_input"
-                >
+                    <input
+                        type="number"
+                        id="qty_input"
+                        value="1"
+                        min="1"
+                        step="1"
+                        inputmode="numeric"
+                    >
 
+                    <button
+                        type="button"
+                        class="qty-btn"
+                        id="qtyPlus"
+                        aria-label="Aumentar quantidade"
+                    >
+                        +
+                    </button>
+                </div>
             </div>
+
 
             <button class="add-btn" id="addprod">
 
