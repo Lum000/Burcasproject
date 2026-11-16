@@ -662,6 +662,9 @@ app.post("/admin/mesas", verifyToken, checkRole('admin'), async (req, res) => {
   }
 })
 
+
+
+
 /* ───────────── IMPRESSORA ───────────── */
 
 function criarPrinter() {
@@ -740,18 +743,19 @@ async function dispararImpressao(mesa_numero, itens, func) {
 
             let grupo = "outros";
 
-            if (
-                categoria === "porcoes" ||
-                categoria === "porcao"
-            ) {
+            if (categoria.includes("porcao")) {
                 grupo = "porcoes";
-            } else if (categoria === "lanches") {
+            } else if (categoria.includes("lanche")) {
                 grupo = "lanches";
-            } else if (categoria === "bebidas") {
+            } else if (categoria.includes("bebida")) {
                 grupo = "bebidas";
-            } else if (categoria === "sobremesas") {
+            } else if (categoria.includes("sobremesa")) {
                 grupo = "sobremesas";
             }
+
+            console.log(
+                `Produto: ${item.nome} | Categoria recebida: ${item.categoria} | Grupo: ${grupo}`
+            );
 
             grupos[grupo].itens.push(item);
         });
@@ -861,18 +865,19 @@ async function dispararImpressao(mesa_numero, itens, func) {
                 printer.println(linhaFina);
             });
 
-            // FINAL DA CATEGORIA
             printer.alignCenter();
             printer.bold(true);
             printer.println(`FIM - ${grupo.titulo}`);
             printer.bold(false);
 
-            // AVANÇA E CORTA O PAPEL
+            // Avança o papel antes de cortar
             printer.newLine();
             printer.newLine();
+            printer.newLine();
+
+
             printer.cut();
 
-            // ENVIA ESTA CATEGORIA PARA A IMPRESSORA
             await printer.execute();
 
             // Pequena pausa entre os grupos
@@ -1203,6 +1208,7 @@ app.post("/imprimir-comando", verifyToken, async (req, res) => {
 
 /* ───────────── PEDIDOS ───────────── */
 
+
 app.post("/add-multi-products", verifyToken, async (req, res) => {
   const idLoja = req.user.idLoja
   const funcionario = req.user.nome
@@ -1213,11 +1219,11 @@ app.post("/add-multi-products", verifyToken, async (req, res) => {
   }
 
   try {
-    // garante que a mesa é da loja e ainda está ativa (não fechada)
     const mesa = await dbGet(
       "SELECT id, numero FROM mesas WHERE id = ? AND idLoja = ? AND status <> 'fechada'",
       [mesa_id, idLoja]
     )
+
     if (!mesa) {
       return res.status(409).json({
         error: "Essa mesa foi fechada. Recarregue a lista de mesas.",
@@ -1225,8 +1231,20 @@ app.post("/add-multi-products", verifyToken, async (req, res) => {
       })
     }
 
+    // Busca as categorias dos produtos diretamente no banco
+    const itensParaImpressao = []
+
     for (const item of itens) {
-      // extras chega como array (ou string JSON); guarda sempre como string ou NULL
+      const produto = await dbGet(
+        `SELECT categoria FROM produtos
+         WHERE id = ? AND idLoja = ?`,
+        [item.id, idLoja]
+      )
+
+      if (!produto) {
+        throw new Error(`Produto ${item.nome} não encontrado nesta loja.`)
+      }
+
       const extras = normalizarExtras(item.extras)
       const extrasStr = extras.length ? JSON.stringify(extras) : null
       const quantidade = Number(item.quantidade) || 1
@@ -1234,13 +1252,14 @@ app.post("/add-multi-products", verifyToken, async (req, res) => {
       const filtroExtras = extrasStr
         ? "extras = ?"
         : "(extras IS NULL OR extras = '[]')"
+
       const params = [mesa.id, item.id, idLoja]
       if (extrasStr) params.push(extrasStr)
 
       const row = await dbGet(
         `SELECT id, quantidade FROM pedidos
-          WHERE mesa_id = ? AND produto_id = ? AND idLoja = ?
-            AND status = 'aberto' AND ${filtroExtras}`,
+         WHERE mesa_id = ? AND produto_id = ? AND idLoja = ?
+         AND status = 'aberto' AND ${filtroExtras}`,
         params
       )
 
@@ -1252,10 +1271,13 @@ app.post("/add-multi-products", verifyToken, async (req, res) => {
       } else {
         await dbRun(
           `INSERT INTO pedidos
-             (mesa_id, mesa_numero, func, produto_id, idLoja, quantidade, status, extras, desc, hora, preco)
+           (mesa_id, mesa_numero, func, produto_id, idLoja, quantidade, status, extras, desc, hora, preco)
            VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-          [mesa.id, mesa.numero, funcionario, item.id, idLoja, quantidade,
-           'aberto', extrasStr, item.obs, new Date().toISOString(), item.preco]
+          [
+            mesa.id, mesa.numero, funcionario, item.id, idLoja,
+            quantidade, 'aberto', extrasStr, item.obs,
+            new Date().toISOString(), item.preco
+          ]
         )
       }
 
@@ -1266,18 +1288,36 @@ app.post("/add-multi-products", verifyToken, async (req, res) => {
         mesa_id: mesa.id,
         valor: item.preco
       })
+
+      // Inclui a categoria recuperada do banco
+      itensParaImpressao.push({
+        ...item,
+        categoria: produto.categoria || 'outros'
+      })
     }
 
     await atualizarTotalMesa(mesa.id)
 
-    dispararImpressao(mesa.numero, itens, funcionario)   // sem await: não atrasa a resposta
+    console.log("Categorias recuperadas para impressão:")
+    itensParaImpressao.forEach(item => {
+      console.log(item.nome, "=>", item.categoria)
+    })
 
-    return res.json({ success: true, message: "Pedido processado com sucesso!" })
+    dispararImpressao(mesa.numero, itensParaImpressao, funcionario)
+
+    return res.json({
+      success: true,
+      message: "Pedido processado com sucesso!"
+    })
+
   } catch (err) {
     console.error(err)
-    return res.status(500).json({ error: "Erro ao processar o pedido: " + err.message })
+    return res.status(500).json({
+      error: "Erro ao processar o pedido: " + err.message
+    })
   }
 })
+
 
 app.get("/getExtras/:pedido_id", verifyToken, async (req, res) => {
   try {
@@ -1895,12 +1935,14 @@ app.post('/adicionarCardapio', async (req, res) => {
                 throw new Error('Mesa não encontrada ou já fechada.');
             }
         }
+        console.log(cliente)
 
         // ==========================================
         // VALIDAR DADOS DO CLIENTE
         // ==========================================
 
         if (pedidoSemMesa) {
+            console.log(cliente)
             if (!cliente) {
                 throw new Error('Informe os dados do cliente.');
             }
@@ -1909,15 +1951,19 @@ app.post('/adicionarCardapio', async (req, res) => {
                 throw new Error('Nome completo e telefone são obrigatórios.');
             }
 
-            if (!cliente.entrega) {
+            if (!cliente.tipoEntrega) {
                 throw new Error('Informe o método de entrega.');
             }
 
             if (
-                cliente.entrega === 'entrega' &&
-                (!cliente.endereco || !cliente.bairro)
+              cliente.tipoEntrega === 'entrega' &&
+              (
+                !cliente.endereco ||
+                !String(cliente.endereco.rua || '').trim() ||
+                !String(cliente.endereco.bairro || '').trim()
+              )
             ) {
-                throw new Error('Informe endereço e bairro para entrega.');
+              throw new Error("Informe endereço e bairro para entrega.")
             }
         }
 
@@ -1962,7 +2008,10 @@ app.post('/adicionarCardapio', async (req, res) => {
 
             for (const extraSelecionado of extrasSelecionados) {
                 const extraEncontrado = extrasDisponiveis.find(extra => {
-                    return extra.nome === extraSelecionado.nome,extra.preco === extraSelecionado.preo;
+                    return (
+                        extra.nome === extraSelecionado.nome &&
+                        Number(extra.preco) === Number(extraSelecionado.preco)
+                    );
                 });
 
                 if (!extraEncontrado) {
@@ -2181,11 +2230,11 @@ app.post('/adicionarCardapio', async (req, res) => {
         const clienteCalculado = {
             nome: String(cliente.nome).trim(),
             telefone: String(cliente.telefone).trim(),
-            entrega: cliente.entrega,
-            endereco: cliente.endereco || '',
-            bairro: cliente.bairro || '',
-            complemento: cliente.complemento || '',
-            pagamentos: cliente.pagamentos
+            tipoEntrega: cliente.tipoEntrega,
+            endereco: cliente.endereco || {},
+            pagamentos: cliente.pagamentos,
+            trocoPara: cliente.trocoPara || null,
+            troco: cliente.troco || null
         };
 
         // ==========================================
