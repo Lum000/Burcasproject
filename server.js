@@ -20,6 +20,9 @@ const Types = require("node-thermal-printer").types
 const { fazerBackup } = require('./backup')
 
 const app = express()
+app.get('/', (req, res) => {
+    res.redirect('/cardapio/burcas-lanchonete')
+})
 app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
@@ -2271,7 +2274,7 @@ app.post('/adicionarCardapio', async (req, res) => {
 /* ───────────── PÁGINA INICIAL E SERVIDOR ───────────── */
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"))
+  res.sendFile(path.join(__dirname, "public","cardapio", "index.html"))
 })
 
 app.listen(3000, () => {
